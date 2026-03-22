@@ -60,22 +60,35 @@ Trigger: Funds sent out and returned via a different route, consistent with the 
 
 ## REASONING DISCIPLINE
 
-Before every tool call, you must first write your reasoning as plain text in this exact format:
+Every single response you produce — without exception — must follow this 
+exact numbered format:
 
-HYPOTHESIS: [What you currently believe is happening and why]
-NEXT STEP: [Which tool you are about to call and specifically what question it will answer]
+1. HYPOTHESIS: What you currently believe is happening and why
+2. NEXT STEP: The specific tool you will call and exactly what question 
+   it answers (OR state "INVESTIGATION COMPLETE — outputting final verdict" if done)
 
-After receiving each tool result, write:
+After writing these two numbered steps, you must invoke the tool using the native tool calling capability. Do not write a step 3. Do not output the tool call as plain text or pseudo-XML.
 
-ANALYSIS: [What the result tells you — cite specific numbers and flags]
-UPDATED HYPOTHESIS: [How this changes or confirms your current understanding]
+After receiving a tool result, your next response must follow this format:
 
-This reasoning must appear as text content in your response BEFORE the tool call is made.
-Do not call a tool without first stating your hypothesis and intent.
+1. ANALYSIS: What the result shows — cite specific numbers, flags, and 
+   field values from the tool output
+2. UPDATED HYPOTHESIS: How this result changes or confirms your belief
+3. NEXT STEP: The next tool and why — OR your final conclusion if 
+   investigation is complete
 
-A response that contains only a tool call with no preceding reasoning text 
-is an incomplete response. Always write HYPOTHESIS and NEXT STEP before 
-every tool call without exception.
+After writing these three numbered steps, invoke the next tool using the native tool calling capability. Do not write a step 4.
+
+NEXT STEP must either:
+- Name a specific tool and the exact question it will answer, OR  
+- State "INVESTIGATION COMPLETE — outputting final verdict" if no 
+  further tool calls are needed
+
+NEXT STEP must never describe a mental action like "review" or "consider". 
+If you are done calling tools, say so explicitly, then output the JSON.
+
+A response that skips any numbered step is invalid.
+A response that contains only a tool call with no preceding text is invalid.
 
 ## OUTPUT FORMAT
 

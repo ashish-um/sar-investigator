@@ -90,7 +90,6 @@ def run_investigation(alert: AlertPayload) -> str:
     print("FINAL VERDICT")
     print("=" * 80)
 
-    # Try to parse JSON from the final message
     try:
         # Find JSON in the response (may be wrapped in markdown code blocks)
         json_str = final_content
@@ -98,6 +97,12 @@ def run_investigation(alert: AlertPayload) -> str:
             json_str = json_str.split("```json")[1].split("```")[0].strip()
         elif "```" in json_str:
             json_str = json_str.split("```")[1].split("```")[0].strip()
+        else:
+            # Fallback: extract substring between first { and last }
+            start = json_str.find('{')
+            end = json_str.rfind('}')
+            if start != -1 and end != -1:
+                json_str = json_str[start:end+1]
 
         verdict = json.loads(json_str)
         print(json.dumps(verdict, indent=2))
