@@ -71,6 +71,12 @@ To prevent the LLM's context window from filling up with raw database dumps (whi
 
 Furthermore, tool outputs are intentionally restructured to push "signal" to the top. The keys `SUMMARY` and `COMPUTED_FLAGS` are capitalized and placed at the very beginning of the JSON response. Because LLMs read down a document linearly, this serves as a visual anchor, ensuring the model pays the most attention to the most mathematically critical evidence rather than getting lost in the noise of raw arrays.
 
+**Key Design Decision: Smart Transaction Sampling**
+The sample selection in `get_transaction_history` is not a naive "top 5 by amount." It uses context-aware logic:
+- **High-risk jurisdiction transactions are always included** in the sample, appended *on top of* the regular top 5 — never replacing one of them. This guarantees the SWIFT transfer to a sanctioned country always appears alongside all structured cash deposits.
+- **When `structuring_presignal` is true**, the 5 regular slots prioritize sub-threshold credit transactions (£8,000–£9,999) instead of largest-by-amount. This ensures all structured deposits and their unique transaction IDs are visible to the LLM.
+- This design prevents a critical data accuracy bug: if high-risk transactions *replaced* a regular slot, the LLM would lack enough transaction IDs to correctly populate evidence entries across multiple rules.
+
 ---
 
 ## 4. The Agent Brain: Prompts & Reasoning Discipline
@@ -101,6 +107,39 @@ We added an aggressive rule to the prompt that rejects generic phrasing:
 > **GOOD**: "5 cash deposits between £9,500 and £9,900"
 
 **Decision Reason:** We force the LLM to extract the exact monetary values, transaction counts, and ratios returned by the Python tools and place them into the final JSON output. This guarantees that human analysts reading the AI's recommendation are given actionable, mathematically accurate evidence. Furthermore, this rule applies to *exculpatory* (innocent) evidence as well. If the verdict is `FALSE_POSITIVE`, the agent must cite exactly *why* the activity is innocent, pulling directly from prior analyst notes or verifiable data constraints.
+
+### Enhanced SAR Evidence Schema
+
+The `key_evidence` entries in the final verdict are not simple one-liners. Each entry is a self-contained evidence record with six fields:
+
+| Field | Purpose |
+|---|---|
+| `rule_mapped` | Which AML rule this evidence supports (e.g., `RULE-01`) |
+| `finding` | One sentence with specific amounts, counts, dates, and counterparty names |
+| `supporting_data` | Structured object with `amounts`, `dates`, `counterparties`, `accounts_involved`, and `transaction_ids` — always as arrays |
+| `regulatory_significance` | Why this pattern is suspicious under the cited regulation |
+| `source_table` | Which database table this evidence was drawn from |
+| `statistical_context` | A mandatory calculated metric comparing the finding to the customer's baseline profile |
+
+**Decision Reason:** A SAR analyst reading only one `key_evidence` entry — with no other context — must be able to understand exactly what happened, who was involved, why it is suspicious, and how it compares to the customer's declared profile. The old schema (`data_point` + `significance`) produced headlines, not evidence.
+
+### Evidence Construction Rules
+
+The prompt includes strict guardrails for evidence quality:
+
+1. **Rule-Evidence Completeness**: Every rule in `rules_triggered` must have a corresponding `key_evidence` entry. Three rules = three entries.
+2. **Unique Transaction IDs**: Transaction IDs must never be reused across evidence entries. Each ID belongs to exactly one transaction.
+3. **Array-Only Fields**: `supporting_data` fields must always be arrays, even for single values. No singular field names like `amount` or `date`.
+4. **Source Segregation**: RULE-07 (PEP) evidence must only contain customer profile fields (`pep_flag`, `risk_rating`, `kyc_status`), not transaction data. Transaction evidence belongs in RULE-01 or RULE-03 entries.
+5. **Mandatory Statistical Context**: Each rule type requires specific calculated figures:
+   - **RULE-01**: Total structured amount as a percentage of declared annual income
+   - **RULE-02**: Retention ratio and credit-to-debit time gap
+   - **RULE-03**: Outflow as a percentage of total credits, plus retention ratio
+   - **RULE-04/07**: Income multiple of flagged amount vs. declared income
+
+### FORMAT B Enforcement
+
+The prompt now includes explicit "critical violation" language ensuring the LLM writes all three FORMAT B steps (`ANALYSIS → UPDATED HYPOTHESIS → NEXT STEP`) after *every* tool result — including results that show no suspicious flags. Skipping FORMAT B and proceeding directly to a tool call is flagged as a critical violation. This prevents the agent from silently consuming benign results without documenting its reasoning.
 
 ---
 
