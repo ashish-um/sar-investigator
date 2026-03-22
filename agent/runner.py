@@ -6,7 +6,8 @@ Prints the full chain of thought and final verdict.
 """
 
 import json
-from langchain_core.messages import SystemMessage, HumanMessage
+import re
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessageChunk
 
 from schemas.alert import AlertPayload
 from agent.prompts import SYSTEM_PROMPT
@@ -24,14 +25,12 @@ def run_investigation(alert: AlertPayload) -> str:
         The final AI message content as a string.
     """
     alert_dict = alert.model_dump()
-
-    # Build initial messages
     human_content = (
         f"ALERT RECEIVED:\n"
         f"{json.dumps(alert_dict, indent=2)}\n\n"
-        f"Begin your investigation. Start by forming a hypothesis, then use the "
-        f"available tools to gather evidence. The customer under investigation is: "
-        f"{alert.customer_id}"
+        f"Begin your investigation. Start by forming a hypothesis, then use "
+        f"the available tools to gather evidence. "
+        f"The customer under investigation is: {alert.customer_id}"
     )
 
     initial_state = {
@@ -44,62 +43,88 @@ def run_investigation(alert: AlertPayload) -> str:
         "verdict": None,
     }
 
-    # Invoke the graph
     print("=" * 80)
     print("STARTING AML INVESTIGATION")
-    print(f"Alert ID: {alert.alert_id}")
+    print(f"Alert ID:    {alert.alert_id}")
     print(f"Customer ID: {alert.customer_id}")
     print("=" * 80)
 
-    result = graph.invoke(initial_state)
-
-    # Print chain of thought
     print("\n" + "=" * 80)
     print("CHAIN OF THOUGHT")
     print("=" * 80)
 
-    for i, msg in enumerate(result["messages"]):
-        msg_type = type(msg).__name__
-        label_map = {
-            "SystemMessage": "System",
-            "HumanMessage": "Human",
-            "AIMessage": "AI",
-            "ToolMessage": "Tool",
-        }
-        label = label_map.get(msg_type, msg_type)
+    final_content = ""
+    current_node = None
+    ai_message_index = 0
+    tool_message_index = 0
+    tool_call_buffer = {}
 
-        print(f"\n--- [{i+1}] {label} ---")
+    # stream_mode="messages" yields (chunk, metadata) tuples
+    # Each chunk is a message fragment as the LLM generates it
+    for chunk, metadata in graph.stream(
+        initial_state,
+        stream_mode="messages"
+    ):
+        node = metadata.get("langgraph_node")
 
-        if hasattr(msg, "content") and msg.content:
-            # Truncate very long tool responses for readability
-            content = str(msg.content)
-            if label == "Tool" and len(content) > 500:
-                print(content[:500] + "... [truncated]")
-            else:
-                print(content)
+        # ── node transition header ─────────────────────────────────
+        if node != current_node:
+            current_node = node
 
-        if hasattr(msg, "tool_calls") and msg.tool_calls:
-            for tc in msg.tool_calls:
-                print(f"  -> Tool call: {tc['name']}({tc['args']})")
+            if node == "agent":
+                ai_message_index += 1
+                print(f"\n--- [AI {ai_message_index}] ---")
 
-    # Extract and print final verdict
-    final_message = result["messages"][-1]
-    final_content = final_message.content if hasattr(final_message, "content") else ""
+            elif node == "tools":
+                tool_message_index += 1
+                print(f"\n--- [Tool {tool_message_index}] ---")
 
-    print("\n" + "=" * 80)
+        # ── stream AI content token by token ──────────────────────
+        if isinstance(chunk, AIMessageChunk):
+
+            # Reasoning text — print as it streams
+            if chunk.content:
+                print(chunk.content, end="", flush=True)
+                final_content += chunk.content
+
+            # Tool call — accumulate and print when the call is complete
+            if chunk.tool_call_chunks:
+                for tc in chunk.tool_call_chunks:
+                    call_id = tc.get("id") or tc.get("index", 0)
+                    if call_id not in tool_call_buffer:
+                        tool_call_buffer[call_id] = {"name": "", "args": ""}
+                    if tc.get("name"):
+                        tool_call_buffer[call_id]["name"] += tc["name"]
+                    if tc.get("args"):
+                        tool_call_buffer[call_id]["args"] += tc["args"]
+
+                # Print completed tool calls (args ends with closing brace)
+                for call_id, tc in list(tool_call_buffer.items()):
+                    if tc["args"].strip().endswith("}"):
+                        print(f"\n  -> Tool call: {tc['name']}({tc['args']})", flush=True)
+                        del tool_call_buffer[call_id]
+
+        # ── print tool results when they arrive ───────────────────
+        else:
+            content = str(chunk.content) if hasattr(chunk, "content") else str(chunk)
+            if len(content) > 600:
+                print(content[:600] + "... [truncated]", flush=True)
+            elif content.strip():
+                print(content, flush=True)
+
+    # ── extract and print final verdict ───────────────────────────
+    print("\n\n" + "=" * 80)
     print("FINAL VERDICT")
     print("=" * 80)
 
-    import re
     try:
-        json_str = final_content
-        json_match = re.search(r'\{.*\}', json_str, re.DOTALL)
+        json_match = re.search(r'\{.*\}', final_content, re.DOTALL)
         if json_match:
-            json_str = json_match.group()
-
-        verdict = json.loads(json_str)
-        print(json.dumps(verdict, indent=2))
-    except (json.JSONDecodeError, IndexError):
+            verdict = json.loads(json_match.group())
+            print(json.dumps(verdict, indent=2))
+        else:
+            print(final_content)
+    except json.JSONDecodeError:
         print(final_content)
 
     return final_content

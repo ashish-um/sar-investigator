@@ -35,7 +35,9 @@ The system loops between these two nodes until the Agent Node decides it has eno
 ### The Runner (`agent/runner.py` & `run_investigation.py`)
 This is the entry point. It takes a JSON alert file (like `tests/sample_alerts/true_positive.json`), strips it down to an `AlertPayload`, and injects it into the initial `AgentState`. 
 
-Once the graph finishes running, the runner extracts the final JSON verdict from the LLM's last message using a robust Regular Expression (`re.search(r'\{.*\}', ...)`).
+Instead of waiting 15-20 seconds for the entire graph to execute and print the results in one large batch, the runner uses `graph.stream(..., stream_mode="messages")`. This streams the LLM's "Chain of Thought" back to the user token-by-token in real-time. It also uses a robust chunk accumulator to construct and display tool calls the moment the LLM decides to use them.
+
+Once the investigation finishes, the runner extracts the final JSON verdict from the accumulated reasoning text using a robust Regular Expression (`re.search(r'\{.*\}', ...)`).
 
 **Decision Reason:** We use a regex fallback here because LLMs occasionally output their reasoning text (like `1. ANALYSIS: ...`) in the exact same message as the JSON block, even when told not to. Trying to parse the whole string as JSON would crash the script. The regex ensures we always isolate just the JSON payload.
 
