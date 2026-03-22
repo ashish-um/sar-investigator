@@ -1,0 +1,18 @@
+{
+    "alert_id": "ALT-INVEST-001",
+    "generated_at": "2024-11-15T10:30:00Z",
+    "alert_source": "TRANSACTION_MONITORING_SYSTEM",
+    "alert_type": "STRUCTURING_AND_HIGH_RISK_JURISDICTION",
+    "severity": "HIGH",
+    "customer_id": "CUST-UK-015201",
+    "triggered_rules": [
+        "RULE-07",
+        "RULE-01",
+        "RULE-03"
+    ],
+    "observation_window_start": "2024-01-01",
+    "observation_window_end": "2024-11-15",
+    "total_flagged_transactions": 45,
+    "flagged_amount_gbp": 387500.00,
+    "alert_narrative": ""
+}

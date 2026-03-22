@@ -1,0 +1,13 @@
+alert_id,customer_id,alert_date,alert_type,rules_triggered,disposition,sar_filed,sar_reference,analyst_notes
+ALT-0001-UK-343467,CUST-UK-007341,2023-11-20,HIGH_VOLUME_INBOUND,RULE-01|RULE-06,FALSE_POSITIVE,False,,All inbound transfers confirmed as family members. Customer contacted and provided verbal confirmation. No SAR warranted.
+ALT-0002-UK-158900,CUST-UK-009102,2023-11-20,HIGH_VOLUME_INBOUND,RULE-01|RULE-06,FALSE_POSITIVE,False,,All inbound transfers confirmed as family members. Customer contacted and provided verbal confirmation. No SAR warranted.
+ALT-0003-UK-258189,CUST-UK-011204,2023-08-15,DORMANT_REACTIVATION,RULE-05,TRUE_POSITIVE,True,NCA-2023-SAR-75715,Spanish holiday property purchase — explainable
+ALT-0004-UK-375871,CUST-UK-050007,2022-08-16,UNUSUAL_PATTERN,RULE-04,FALSE_POSITIVE,False,,Investigated and resolved. No suspicious activity confirmed.
+ALT-0005-UK-827967,CUST-UK-050012,2022-05-26,DORMANT_REACTIVATION,RULE-04,FALSE_POSITIVE,False,,Investigated and resolved. No suspicious activity confirmed.
+ALT-0006-UK-334981,CUST-UK-050014,2023-05-14,UNUSUAL_PATTERN,RULE-04,FALSE_POSITIVE,False,,Investigated and resolved. No suspicious activity confirmed.
+ALT-0007-UK-961010,CUST-UK-050015,2023-10-16,UNUSUAL_PATTERN,RULE-04,FALSE_POSITIVE,False,,Investigated and resolved. No suspicious activity confirmed.
+ALT-0008-UK-832229,CUST-UK-050017,2023-02-16,DORMANT_REACTIVATION,RULE-04,FALSE_POSITIVE,False,,Investigated and resolved. No suspicious activity confirmed.
+ALT-0009-UK-379588,CUST-UK-050024,2022-03-27,CASH_THRESHOLD,RULE-04,FALSE_POSITIVE,False,,Investigated and resolved. No suspicious activity confirmed.
+ALT-0010-UK-540071,CUST-UK-050039,2022-03-16,UNUSUAL_PATTERN,RULE-04,FALSE_POSITIVE,False,,Investigated and resolved. No suspicious activity confirmed.
+ALT-0099-UK-741029,CUST-UK-015201,2024-11-09,PEP_HIGH_RISK_ACTIVITY,RULE-07|RULE-01|RULE-03,PENDING,False,,PEP customer (proximity — son of State Governor). Unexplained cash deposits followed by SWIFT to AE. Escalated for investigation.
+ALT-0100-UK-659906,CUST-UK-015202,2024-11-11,SANCTIONS_PROXIMITY_HIGH_RISK,RULE-07|RULE-03,PENDING,False,,"Customer has active sanctions_flag (Breskvin family, EU_CONSOLIDATED). Receiving funds from RU-based entities, outbound to BVI watchlist entity 'Horizon Gateway Ltd'. Escalated."

@@ -1,0 +1,16 @@
+{
+    "alert_id": "ALT-INVEST-002",
+    "generated_at": "2024-11-15T14:00:00Z",
+    "alert_source": "TRANSACTION_MONITORING_SYSTEM",
+    "alert_type": "HIGH_VOLUME_INBOUND",
+    "severity": "MEDIUM",
+    "customer_id": "CUST-UK-007341",
+    "triggered_rules": [
+        "RULE-06"
+    ],
+    "observation_window_start": "2024-01-01",
+    "observation_window_end": "2024-11-15",
+    "total_flagged_transactions": 8,
+    "flagged_amount_gbp": 2800.00,
+    "alert_narrative": ""
+}
