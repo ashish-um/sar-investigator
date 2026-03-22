@@ -77,16 +77,16 @@ class TestGetTransactionHistory:
         })
         assert isinstance(result, str)
         data = json.loads(result)
-        assert "transaction_count" in data
-        assert "transactions" in data
-        assert "computed_flags" in data
-        if data["transaction_count"] > 0:
-            assert "summary" in data
-            summary = data["summary"]
+        assert "total_transaction_count" in data
+        assert "SAMPLE_TRANSACTIONS_TOP_5" in data
+        assert "COMPUTED_FLAGS" in data
+        if data["total_transaction_count"] > 0:
+            assert "SUMMARY" in data
+            summary = data["SUMMARY"]
             assert "total_credits_gbp" in summary
             assert "total_debits_gbp" in summary
             assert "retention_ratio" in summary
-            flags = data["computed_flags"]
+            flags = data["COMPUTED_FLAGS"]
             assert "rapid_outflow_detected" in flags
             assert "structuring_presignal" in flags
             assert "low_retention" in flags
@@ -100,8 +100,8 @@ class TestGetTransactionHistory:
             "date_to": "1990-12-31",
         })
         data = json.loads(result)
-        assert data["transaction_count"] == 0
-        assert data["computed_flags"]["no_transactions_found"] is True
+        assert data["total_transaction_count"] == 0
+        assert data["COMPUTED_FLAGS"]["no_transactions_found"] is True
 
 
 class TestGetPriorAlertHistory:
@@ -111,21 +111,21 @@ class TestGetPriorAlertHistory:
         result = get_prior_alert_history.invoke({"customer_id": "CUST-UK-007341"})
         assert isinstance(result, str)
         data = json.loads(result)
-        assert "alerts" in data
-        assert len(data["alerts"]) > 0
-        assert "risk_context" in data
-        ctx = data["risk_context"]
+        assert "SAMPLE_ALERTS_TOP_3" in data
+        assert len(data["SAMPLE_ALERTS_TOP_3"]) > 0
+        assert "COMPUTED_FLAGS" in data
+        ctx = data["COMPUTED_FLAGS"]
         assert "duplicate_sar_safe" in ctx
         assert "prior_true_positives" in ctx
         assert "prior_false_positives" in ctx
         assert "sar_ever_filed" in ctx
         assert "repeat_offender" in ctx
         # Verify rules_triggered is a list, not a pipe-separated string
-        first_alert = data["alerts"][0]
+        first_alert = data["SAMPLE_ALERTS_TOP_3"][0]
         assert isinstance(first_alert["rules_triggered"], list)
 
     def test_customer_without_alerts(self):
         result = get_prior_alert_history.invoke({"customer_id": "CUST-UK-004821"})
         data = json.loads(result)
-        assert data["alerts"] == []
-        assert data["risk_context"]["duplicate_sar_safe"] is True
+        assert data["SAMPLE_ALERTS_TOP_3"] == []
+        assert data["COMPUTED_FLAGS"]["duplicate_sar_safe"] is True

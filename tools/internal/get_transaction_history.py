@@ -53,11 +53,11 @@ def get_transaction_history(
 
     if not transactions:
         return json.dumps({
-            "account_id": account_id,
-            "transaction_count": 0,
-            "transactions": [],
-            "summary": None,
-            "computed_flags": {"no_transactions_found": True},
+            "SUMMARY": None,
+            "COMPUTED_FLAGS": {"no_transactions_found": True},
+            "SAMPLE_TRANSACTIONS_TOP_5": [],
+            "total_transaction_count": 0,
+            "note": "No transactions found matching criteria.",
         })
 
     # Summary statistics
@@ -150,12 +150,15 @@ def get_transaction_history(
         "has_high_risk_jurisdiction_transactions": has_high_risk,
     }
 
+    # Sort transactions by amount descending to get the largest ones
+    top_transactions = sorted(transactions, key=lambda x: x.get("amount_gbp", 0), reverse=True)[:5]
+
     result = {
-        "account_id": account_id,
-        "transaction_count": len(transactions),
-        "transactions": transactions[:20],  # Truncated to stay under token limits
-        "summary": summary,
-        "computed_flags": computed_flags,
+        "SUMMARY": summary,
+        "COMPUTED_FLAGS": computed_flags,
+        "SAMPLE_TRANSACTIONS_TOP_5": top_transactions,
+        "total_transaction_count": len(transactions),
+        "note": "Full transaction detail available via filtered query",
     }
 
     return json.dumps(result, default=str)

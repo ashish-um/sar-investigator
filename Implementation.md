@@ -61,7 +61,13 @@ The LLM cannot query the database directly. Instead, we provide it with four spe
 - **What it does:** Retrieves previous alerts and their dispositions (e.g., whether a human analyst previously marked similar activity as a false positive because the money was just an inheritance).
 - **Why we built it:** Context is paramount. If a human already cleared this exact activity for this customer three months ago, an automated agent shouldn't flag it again. It also prevents the agent from filing duplicate SARs for the same activity window, which is legally prohibited by the NCA.
 
-**Key Design Decision for Tools:** Every tool's docstring explicitly states: `"Only the parameters listed below are accepted. Do not pass any additional parameters."` We added this because LLMs have a habit of "hallucinating" parameters that don't exist in the function signature if they think it will help (like trying to pass a date filter to the customer profile tool). This strict instruction prevents runtime crashes.
+**Key Design Decision: Parameter Hallucination Prevention**
+Every tool's docstring explicitly states: `"Only the parameters listed below are accepted. Do not pass any additional parameters."` We added this because LLMs have a habit of "hallucinating" parameters that don't exist in the function signature if they think it will help (like trying to pass a date filter to the customer profile tool). This strict instruction prevents runtime crashes.
+
+**Key Design Decision: Token Efficiency & Context Management**
+To prevent the LLM's context window from filling up with raw database dumps (which wastes thousands of tokens and degrades reasoning), tools return **summaries and computed flags** in full, but aggressively truncate raw data arrays. For example, `get_transaction_history` returns a full statistical summary (total transactions, net change, retention ratio, etc.) and computed flags, but truncates the raw transactions array to only the Top 5 largest events. Similarly, `get_prior_alert_history` only returns the Top 3 most recent alerts alongside the full risk context.
+
+Furthermore, tool outputs are intentionally restructured to push "signal" to the top. The keys `SUMMARY` and `COMPUTED_FLAGS` are capitalized and placed at the very beginning of the JSON response. Because LLMs read down a document linearly, this serves as a visual anchor, ensuring the model pays the most attention to the most mathematically critical evidence rather than getting lost in the noise of raw arrays.
 
 ---
 

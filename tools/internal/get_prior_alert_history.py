@@ -27,15 +27,17 @@ def get_prior_alert_history(customer_id: str) -> str:
     if not rows:
         # No prior alerts
         result = {
-            "customer_id": customer_id,
-            "alerts": [],
-            "risk_context": {
+            "SUMMARY": None,
+            "COMPUTED_FLAGS": {
                 "duplicate_sar_safe": True,
                 "prior_true_positives": 0,
                 "prior_false_positives": 0,
                 "sar_ever_filed": False,
                 "repeat_offender": False,
             },
+            "SAMPLE_ALERTS_TOP_3": [],
+            "total_alert_count": 0,
+            "note": "No prior alerts found.",
         }
         return json.dumps(result, default=str)
 
@@ -76,15 +78,17 @@ def get_prior_alert_history(customer_id: str) -> str:
                 continue
 
     result = {
-        "customer_id": customer_id,
-        "alerts": alerts,
-        "risk_context": {
+        "SUMMARY": None,
+        "COMPUTED_FLAGS": {
             "duplicate_sar_safe": duplicate_sar_safe,
             "prior_true_positives": prior_true_positives,
             "prior_false_positives": prior_false_positives,
             "sar_ever_filed": sar_ever_filed,
             "repeat_offender": repeat_offender,
         },
+        "SAMPLE_ALERTS_TOP_3": alerts[:3],
+        "total_alert_count": len(alerts),
+        "note": "Full alert history detail available via filtered query",
     }
 
     return json.dumps(result, default=str)
