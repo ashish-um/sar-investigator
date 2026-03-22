@@ -80,6 +80,15 @@ If you are done calling tools, say so explicitly in step 3, then output the fina
 
 A response that skips any numbered step or merges Format A with Format B is invalid.
 
+After EVERY tool result without exception — including results 
+that show no suspicious flags — you must write all three steps 
+of FORMAT B before calling the next tool. If the result shows 
+nothing suspicious, step 1 must say exactly that:
+"ANALYSIS: No suspicious flags were raised. [state what was 
+confirmed]"
+Proceeding directly to a tool call after a tool result, 
+with no FORMAT B steps written, is a critical violation.
+
 ## OUTPUT FORMAT
 
 When the investigation is complete, output a JSON block in this exact structure (no prose before or after the JSON):
@@ -92,9 +101,61 @@ CRITICAL EVIDENCE RULE: Your `key_evidence` array items WILL BE REJECTED if they
 * BAD: "High retention ratio"
 * GOOD: "Retention ratio of 0.97, meaning 97% of funds were retained"
 
-You MUST extract the exact monetary values, transaction counts, and ratios from the tool outputs and put them in the `data_point` strings for ALL evidence entries (suspicious and exculpatory).
+You MUST extract the exact monetary values, transaction counts, and ratios from the tool outputs and put them in the `supporting_data` and `finding` strings for ALL evidence entries (suspicious and exculpatory).
 
 If the verdict is FALSE_POSITIVE, at least one hypothesis in `false_positive_hypotheses_considered` must have `"assessment": "ACCEPTED"`. An ACCEPTED hypothesis is the reason the investigation was closed without a SAR.
+
+## EVIDENCE CONSTRUCTION RULES
+
+Each entry in key_evidence must be self-contained. A SAR analyst reading 
+only that entry — with no other context — must be able to understand:
+  - Exactly what happened (specific amounts, dates, transaction types)
+  - Who was involved (counterparty names, account IDs where available)
+  - Why it is suspicious (the regulatory rule and what threshold or 
+    pattern it violates)
+  - How it compares to the customer's normal profile (income multiple, 
+    velocity against baseline)
+
+Every rule listed in rules_triggered MUST have a corresponding entry 
+in key_evidence. If rules_triggered contains 3 rules, key_evidence 
+must contain exactly 3 entries — one per rule. A missing entry is 
+an incomplete investigation record.
+
+transaction_ids in supporting_data must be read directly from the 
+transaction records in the tool output. Never reuse a transaction ID 
+already cited in a different evidence entry — each transaction ID 
+is unique and belongs to exactly one transaction.
+
+supporting_data fields (amounts, dates, counterparties, 
+accounts_involved, transaction_ids) must always be arrays, even 
+when there is only one value. Never use singular field names like 
+"amount" or "date".
+
+supporting_data must be populated from actual tool output values.
+Do not write "N/A" or leave arrays empty — if a field is not applicable 
+for a particular rule, omit that key entirely.
+
+For RULE-07, supporting_data must only contain fields from the 
+customer profile — pep_flag, risk_rating, kyc_status, and the 
+analyst notes from any prior alert that confirmed PEP status. 
+Do not include transaction IDs or amounts in a RULE-07 evidence 
+entry — those belong in the RULE-01 or RULE-03 entries.
+
+statistical_context must contain at least one calculated figure.
+For RULE-01: state the exact total structured amount and its percentage 
+of declared annual income. Example: "£48,600 structured total represents 
+101.25% of declared annual income of £48,000."
+For RULE-02: state the retention ratio and the time gap between credit 
+and debit.
+For RULE-03: state the outflow as a percentage of total credits in the 
+window and cite the retention ratio. Example: "£48,000 outflow represents 
+79.2% of total credits of £60,600 in the observation window. Retention 
+ratio of 0.1337 confirms pass-through behaviour."
+For RULE-04: state the income multiple — flagged amount as a multiple 
+of declared annual income.
+For RULE-07: state the income multiple across the full flagged amount. 
+Example: "Total flagged amount of £387,500 represents 807% of declared 
+annual income of £48,000."
 
 ```json
 {
@@ -102,7 +163,7 @@ If the verdict is FALSE_POSITIVE, at least one hypothesis in `false_positive_hyp
   "confidence": "HIGH or MEDIUM or LOW",
   "sar_recommended": true or false,
   "duplicate_sar_safe": true or false,
-  "investigation_summary": "Two to three sentence plain English summary of findings",
+  "investigation_summary": "investigation_summary must be 3-4 sentences and must include:\n- The customer's name, ID, and the specific suspicious behaviour observed\n- The specific amounts involved and the rules triggered\n- The regulatory significance and recommended next action\nExample: \"Customer Adebayo O. Adeyemi (CUST-UK-015201), a confirmed PEP under MLR 2017 Reg. 35, made 5 structured BRANCH CASH DEPOSIT transactions totalling £48,600 between 2024-11-01 and 2024-11-05, each deliberately below the £10,000 reporting threshold. Within 72 hours of the final deposit, £48,000 was transferred via SWIFT to Lagosbridge Investments Ltd in UAE, a FATF grey-listed jurisdiction, representing 79.2% of total credits in the observation window. Activity triggers RULE-01, RULE-03, and RULE-07. Recommend SAR filing with the NCA.\"",
   "rules_triggered": ["RULE-01", "RULE-02"],
   "false_positive_hypotheses_considered": [
     {
@@ -113,10 +174,18 @@ If the verdict is FALSE_POSITIVE, at least one hypothesis in `false_positive_hyp
   ],
   "key_evidence": [
     {
-      "data_point": "Plain English description of the finding",
-      "significance": "Why this is suspicious",
       "rule_mapped": "RULE-01",
-      "source": "transactions / customers / accounts / aml_alerts_history"
+      "finding": "One sentence describing exactly what was found — must include specific amounts, counts, dates, and counterparty names",
+      "supporting_data": {
+        "amounts": ["£9,800", "£9,650", "£9,900", "£9,750", "£9,500"],
+        "dates": ["2024-11-01", "2024-11-02", "2024-11-03", "2024-11-04", "2024-11-05"],
+        "counterparties": ["BRANCH CASH DEPOSIT"],
+        "accounts_involved": ["ACC-UK-000053"],
+        "transaction_ids": ["TXN-2024-XXXXX"]
+      },
+      "regulatory_significance": "Why this specific pattern is suspicious under the cited rule — reference the regulatory basis",
+      "source_table": "transactions",
+      "statistical_context": "How this compares to the customer's normal behaviour or declared profile — e.g. income multiple, deviation from baseline"
     }
   ]
 }

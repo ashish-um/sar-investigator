@@ -107,9 +107,7 @@ def run_investigation(alert: AlertPayload) -> str:
         # ── print tool results when they arrive ───────────────────
         else:
             content = str(chunk.content) if hasattr(chunk, "content") else str(chunk)
-            if len(content) > 600:
-                print(content[:600] + "... [truncated]", flush=True)
-            elif content.strip():
+            if content.strip():
                 print(content, flush=True)
 
     # ── extract and print final verdict ───────────────────────────
@@ -121,7 +119,7 @@ def run_investigation(alert: AlertPayload) -> str:
         json_match = re.search(r'\{.*\}', final_content, re.DOTALL)
         if json_match:
             verdict = json.loads(json_match.group())
-            print(json.dumps(verdict, indent=2))
+            print(json.dumps(verdict, indent=2, ensure_ascii=False))
         else:
             print(final_content)
     except json.JSONDecodeError:

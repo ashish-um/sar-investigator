@@ -2,18 +2,41 @@
 Pydantic schema for the investigation verdict output.
 """
 
+from typing import List, Optional
 from pydantic import BaseModel
 
+class SupportingData(BaseModel):
+    amounts: Optional[List[str]] = None
+    dates: Optional[List[str]] = None
+    counterparties: Optional[List[str]] = None
+    accounts_involved: Optional[List[str]] = None
+    transaction_ids: Optional[List[str]] = None
+
+class KeyEvidenceItem(BaseModel):
+    rule_mapped: str
+    finding: str
+    supporting_data: SupportingData
+    regulatory_significance: str
+    source_table: str
+    statistical_context: Optional[str] = None
+
+class FalsePositiveHypothesis(BaseModel):
+    hypothesis: str
+    assessment: str
+    reason: str
 
 class InvestigationVerdict(BaseModel):
-    investigation_id: str
-    alert_id: str
-    customer_id: str
+    investigation_id: Optional[str] = None
+    alert_id: Optional[str] = None
+    customer_id: Optional[str] = None
     verdict: str  # TRUE_POSITIVE / FALSE_POSITIVE / INCONCLUSIVE
     confidence: str  # HIGH / MEDIUM / LOW
     sar_recommended: bool
     duplicate_sar_safe: bool
     rules_triggered: list[str]
-    summary: str
-    chain_of_thought: list[dict]
-    total_tools_called: int
+    investigation_summary: Optional[str] = None
+    summary: Optional[str] = None
+    false_positive_hypotheses_considered: Optional[List[FalsePositiveHypothesis]] = None
+    key_evidence: Optional[List[KeyEvidenceItem]] = None
+    chain_of_thought: Optional[list[dict]] = None
+    total_tools_called: Optional[int] = None

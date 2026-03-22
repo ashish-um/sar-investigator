@@ -150,8 +150,26 @@ def get_transaction_history(
         "has_high_risk_jurisdiction_transactions": has_high_risk,
     }
 
-    # Sort transactions by amount descending to get the largest ones
-    top_transactions = sorted(transactions, key=lambda x: x.get("amount_gbp", 0), reverse=True)[:5]
+    # Separate high-risk and regular transactions
+    high_risk_txns = [t for t in transactions
+                      if t.get("counterparty_is_high_risk_jurisdiction")]
+
+    regular = [t for t in transactions
+               if not t.get("counterparty_is_high_risk_jurisdiction")]
+
+    # If structuring presignal, prioritise sub-threshold credits
+    if computed_flags["structuring_presignal"]:
+        structured = sorted(
+            [t for t in regular if 8000 <= t.get("amount_gbp", 0) <= 9999],
+            key=lambda t: t.get("amount_gbp", 0),
+            reverse=True
+        )[:5]
+        top_transactions = high_risk_txns + structured
+    else:
+        top_regular = sorted(
+            regular, key=lambda t: t.get("amount_gbp", 0), reverse=True
+        )[:5]
+        top_transactions = high_risk_txns + top_regular
 
     result = {
         "SUMMARY": summary,
