@@ -9,9 +9,9 @@ import os
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
-from langchain_groq import ChatGroq
 
 from agent.state import AgentState
+from agent.llm import get_llm
 from tools import tools
 
 load_dotenv()
@@ -27,11 +27,7 @@ def should_continue(state: AgentState) -> str:
 
 def agent_node(state: AgentState) -> dict:
     """Call the LLM with the current message history."""
-    llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
-        temperature=0,
-        api_key=os.getenv("GROQ_API_KEY"),
-    )
+    llm = get_llm()
     llm_with_tools = llm.bind_tools(tools)
     response = llm_with_tools.invoke(state["messages"])
     return {"messages": [response]}

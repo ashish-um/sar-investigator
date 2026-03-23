@@ -14,6 +14,20 @@ from agent.prompts import SYSTEM_PROMPT
 from agent.graph import graph
 
 
+def _extract_text(content) -> str:
+    """Extract plain text from content that may be a string or a list of dicts (Gemini format)."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                parts.append(item.get("text", ""))
+            elif isinstance(item, str):
+                parts.append(item)
+        return "".join(parts)
+    return str(content)
+
 def run_investigation(alert: AlertPayload) -> str:
     """
     Run an AML investigation for the given alert.
@@ -84,8 +98,10 @@ def run_investigation(alert: AlertPayload) -> str:
 
             # Reasoning text — print as it streams
             if chunk.content:
-                print(chunk.content, end="", flush=True)
-                final_content += chunk.content
+                text = _extract_text(chunk.content)
+                if text:
+                    print(text, end="", flush=True)
+                    final_content += text
 
             # Tool call — accumulate and print when the call is complete
             if chunk.tool_call_chunks:
@@ -106,7 +122,7 @@ def run_investigation(alert: AlertPayload) -> str:
 
         # ── print tool results when they arrive ───────────────────
         else:
-            content = str(chunk.content) if hasattr(chunk, "content") else str(chunk)
+            content = _extract_text(chunk.content) if hasattr(chunk, "content") else str(chunk)
             if content.strip():
                 print(content, flush=True)
 
