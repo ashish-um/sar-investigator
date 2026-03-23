@@ -10,7 +10,7 @@ Whether you're a developer joining the team or a stakeholder wanting to understa
 
 Banks generate thousands of automated alerts every day flagging potentially suspicious customer transactions. Most of these are "false positives" (legitimate activity like receiving an inheritance or moving house). However, some are "true positives" (genuine money laundering, structuring, or illicit funding). 
 
-This project uses an AI Agent powered by **LangChain** and **LangGraph** (with Groq's `llama-3.3-70b-versatile` LLM) to act as a Level 1 AML Investigator. When given an alert, the agent:
+This project uses an AI Agent powered by **LangChain** and **LangGraph** to act as a Level 1 AML Investigator. The LLM provider is configurable at runtime — currently supporting **Groq** (`llama-3.3-70b-versatile`) and **Google Gemini** (`gemini-2.5-flash`) — with no code changes required to switch between them. When given an alert, the agent:
 1. Forms a hypothesis about what the customer is doing.
 2. Uses a suite of internal database tools to gather financial evidence.
 3. Analyzes the tool results to confirm or refute its hypothesis.
@@ -32,6 +32,19 @@ The graph has two main nodes:
 
 The system loops between these two nodes until the Agent Node decides it has enough evidence and outputs the final JSON verdict instead of requesting another tool.
 
+### The LLM Factory (`agent/llm.py`)
+The agent is **provider-agnostic**. Instead of hardcoding a specific LLM, `agent/graph.py` calls `get_llm()` from `agent/llm.py`, which reads three environment variables:
+
+| Variable | Purpose | Example |
+|---|---|---|
+| `LLM_PROVIDER` | Which provider to use | `groq` or `gemini` |
+| `LLM_MODEL` | Optional model override | `gemini-2.5-flash` (blank = provider default) |
+| `GROQ_API_KEY` / `GEMINI_API_KEY` | The corresponding API key | — |
+
+`get_llm()` validates the API key is present, imports the correct LangChain chat model (`ChatGroq` or `ChatGoogleGenerativeAI`), and returns it. Both share the `BaseChatModel` interface, so nothing downstream needs to know which provider is active.
+
+**Decision Reason:** We use lazy imports (importing inside the function) so that `langchain-groq` is not required when using Gemini and vice versa. This keeps the dependency footprint minimal and allows switching providers at runtime by editing `.env` alone.
+
 ### The Runner (`agent/runner.py` & `run_investigation.py`)
 This is the entry point. It takes a JSON alert file (like `tests/sample_alerts/true_positive.json`), strips it down to an `AlertPayload`, and injects it into the initial `AgentState`. 
 
@@ -40,6 +53,9 @@ Instead of waiting 15-20 seconds for the entire graph to execute and print the r
 Once the investigation finishes, the runner extracts the final JSON verdict from the accumulated reasoning text using a robust Regular Expression (`re.search(r'\{.*\}', ...)`).
 
 **Decision Reason:** We use a regex fallback here because LLMs occasionally output their reasoning text (like `1. ANALYSIS: ...`) in the exact same message as the JSON block, even when told not to. Trying to parse the whole string as JSON would crash the script. The regex ensures we always isolate just the JSON payload.
+
+**Key Design Decision: Cross-Provider Content Compatibility**
+Different LLM providers return streaming content in different formats — Groq returns `chunk.content` as a plain string, while Gemini returns it as a list of dictionaries (multimodal format). The runner uses a `_extract_text()` helper function that normalises both formats into plain text, ensuring the streaming output and verdict extraction work identically regardless of which provider is active.
 
 ---
 

@@ -4,7 +4,7 @@ A LangGraph-based AI agent that investigates suspicious customer activity and de
 
 ## Tech Stack
 
-- **LLM:** `llama-3.3-70b-versatile` via Groq API
+- **LLM:** Multi-provider — Groq (`llama-3.3-70b-versatile`) or Google Gemini (`gemini-2.5-flash`), switchable via `.env`
 - **Agent Framework:** LangGraph with LangChain
 - **Database:** SQLite (seeded from CSV files)
 - **Validation:** Pydantic schemas
@@ -17,7 +17,12 @@ A LangGraph-based AI agent that investigates suspicious customer activity and de
 │   └── scripts/                   # Schema creation and seeding
 ├── tools/                         # LangChain tool definitions
 │   └── internal/                  # Four investigation tools
-├── agent/                         # LangGraph agent (state, graph, prompts, runner)
+├── agent/                         # LangGraph agent
+│   ├── llm.py                     # Multi-provider LLM factory
+│   ├── graph.py                   # StateGraph definition
+│   ├── prompts.py                 # System prompt & reasoning rules
+│   ├── runner.py                  # Streaming runner with cross-provider support
+│   └── state.py                   # AgentState definition
 ├── schemas/                       # Pydantic models (AlertPayload, InvestigationVerdict)
 └── tests/                         # Tool tests and sample alerts
 ```
@@ -35,7 +40,7 @@ pip install -r requirements.txt
 
 # 3. Configure environment
 cp .env.example .env
-# Edit .env and add your GROQ_API_KEY
+# Edit .env — set LLM_PROVIDER (groq or gemini) and the corresponding API key
 
 # 4. Create database schema
 python data/scripts/create_schema.py
