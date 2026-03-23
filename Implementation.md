@@ -33,17 +33,32 @@ The graph has two main nodes:
 The system loops between these two nodes until the Agent Node decides it has enough evidence and outputs the final JSON verdict instead of requesting another tool.
 
 ### The LLM Factory (`agent/llm.py`)
-The agent is **provider-agnostic**. Instead of hardcoding a specific LLM, `agent/graph.py` calls `get_llm()` from `agent/llm.py`, which reads three environment variables:
+The agent is **provider-agnostic**. Instead of hardcoding a specific LLM, `agent/graph.py` calls `get_llm()` from `agent/llm.py`, which reads environment variables to determine the provider, model, and API key:
 
 | Variable | Purpose | Example |
 |---|---|---|
-| `LLM_PROVIDER` | Which provider to use | `groq` or `gemini` |
+| `LLM_PROVIDER` | Which provider to use | `groq`, `gemini`, or `deepseek` |
 | `LLM_MODEL` | Optional model override | `gemini-2.5-flash` (blank = provider default) |
-| `GROQ_API_KEY` / `GEMINI_API_KEY` | The corresponding API key | — |
+| `GROQ_API_KEY` | Groq key(s) — comma-separated for key hopping | `gsk_key1,gsk_key2` |
+| `GEMINI_API_KEY` | Google Gemini API key | — |
+| `OPENROUTER_API_KEY` | OpenRouter key (for DeepSeek via OpenRouter) | — |
 
-`get_llm()` validates the API key is present, imports the correct LangChain chat model (`ChatGroq` or `ChatGoogleGenerativeAI`), and returns it. Both share the `BaseChatModel` interface, so nothing downstream needs to know which provider is active.
+`get_llm()` validates the API key is present, imports the correct LangChain chat model, and returns it. All three providers share the `BaseChatModel` interface, so nothing downstream needs to know which provider is active.
+
+The **DeepSeek** provider uses `ChatOpenAI` from `langchain-openai` with `base_url` pointed at `https://openrouter.ai/api/v1`. OpenRouter exposes an OpenAI-compatible API, so no DeepSeek-specific package is needed.
 
 **Decision Reason:** We use lazy imports (importing inside the function) so that `langchain-groq` is not required when using Gemini and vice versa. This keeps the dependency footprint minimal and allows switching providers at runtime by editing `.env` alone.
+
+#### Groq Key Hopping
+Groq's free tier has aggressive rate limits (429 errors). To handle this transparently, `get_llm()` returns a `_KeyHoppingGroq` wrapper when the provider is Groq. This wrapper:
+
+1. Reads all API keys from `GROQ_API_KEY` or `GROQ_API_KEYS` (both accept comma-separated values).
+2. Stores them in a `_GroqKeyPool` (round-robin index).
+3. Overrides `_generate()` and `_stream()` to catch `groq.RateLimitError`.
+4. On a 429, it rotates to the next key, rebuilds the internal HTTP client, and retries.
+5. Each key is tried once. If all keys are exhausted, the error is raised.
+
+**Decision Reason:** The retry is implemented as a `ChatGroq` subclass rather than external retry middleware so that key rotation happens *inside* the model — the graph, runner, and tools are completely unaware of it. This also means the retry catches errors mid-stream (during `_stream()`), not just on the initial request.
 
 ### The Runner (`agent/runner.py` & `run_investigation.py`)
 This is the entry point. It takes a JSON alert file (like `tests/sample_alerts/true_positive.json`), strips it down to an `AlertPayload`, and injects it into the initial `AgentState`. 
