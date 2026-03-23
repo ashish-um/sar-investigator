@@ -24,6 +24,7 @@ A LangGraph-based AI agent that investigates suspicious customer activity and de
 │   ├── runner.py                  # Streaming runner with cross-provider support
 │   └── state.py                   # AgentState definition
 ├── schemas/                       # Pydantic models (AlertPayload, InvestigationVerdict)
+├── templates/                     # Frontend UI templates (index.html)
 └── tests/                         # Tool tests and sample alerts
 ```
 
@@ -51,9 +52,13 @@ python data/scripts/seed_database.py
 # 6. Run tool tests (must pass before running the agent)
 python -m pytest tests/test_tools.py -v
 
-# 7. Run an investigation
+# 7. Run an investigation via CLI
 python run_investigation.py tests/sample_alerts/true_positive.json
 python run_investigation.py tests/sample_alerts/false_positive.json
+
+# 8. Or run the Web UI Dashboard
+uvicorn api:app --reload
+# Then open http://127.0.0.1:8000 in your browser
 ```
 
 ## Investigation Tools

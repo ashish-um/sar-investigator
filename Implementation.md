@@ -63,11 +63,17 @@ Groq's free tier has aggressive rate limits (429 errors). To handle this transpa
 ### The Interfaces (`agent/runner.py`, `run_investigation.py`, and `api.py`)
 The system has two entry points that both orchestrate the same underlying graph:
 
-1. **CLI (`run_investigation.py`)**: Takes a JSON alert file, strips it down to an `AlertPayload`, and injects it into the initial `AgentState`. 
+1. **CLI (`run_investigation.py`)**: Takes a JSON alert file, strips it down to an `AlertPayload`, and injects it into the initial `AgentState`. It dynamically reads and prints the active LLM Provider and Model to `stdout` before initiating the investigation loop.
 2. **API (`api.py`)**: A FastAPI application providing the following endpoints:
    - `POST /investigate`: Accepts the `AlertPayload` as a JSON body and streams the investigation.
    - `GET /api/alerts`: Scans the `tests/sample_alerts/` directory and returns all available True Positive and False Positive alert JSON payloads.
-   - `GET /`: Serves a static `index.html` frontend UI allowing users to dynamically select alerts from a dropdown menu and stream the LLM's investigation in real time.
+   - `GET /`: Serves a Jinja2-rendered `index.html` frontend dashboard. Users can dynamically select internal alerts and stream the investigation natively.
+
+**UI Design Decisions:**
+The web dashboard operates entirely on **Tailwind CSS** delivered via CDN, conforming to a minimalistic **Google Material** white theme (using Roboto and high-contrast styling). 
+- **Space Management**: Database response payloads can be thousands of lines long. To prevent the LLM's valuable reasoning text from being pushed off-screen, all `tool_result` blocks are inserted as HTML5 `<details>` elements that are collapsed by default. Clicking them calculates their expanded height and triggers native scrolling.
+- **Investigation Flight-Recorder**: An internal JavaScript string silently compiles the entire investigation (thoughts, tool paths, exact parsed payloads, and verdicts). A final "Copy Full Investigation Log" button extracts this to the clipboard, saving analysts from manually highlighting massive browser DOM blocks.
+- **Transparent LLM Identity**: Just like the CLI runner, the UI dashboard injects the exact LLM configuration from the environment and explicitly badges the active Provider and Model at the top of the interface so analysts always know who is generating the SAR.
 
 Both interfaces use `graph.stream(..., stream_mode="messages")`. This streams the LLM's "Chain of Thought" back to the user token-by-token in real-time. 
 
