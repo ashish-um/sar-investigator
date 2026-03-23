@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AML SAR Investigator</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --border-color: #334155;
+            --text-color: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --tool-bg: #1e1e2f;
+            --tool-border: #4f46e5;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--panel-bg);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            background-color: var(--border-color);
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .status-badge.active {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+
+        main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            gap: 1rem;
+        }
+
+        .left-panel {
+            border-right: 1px solid var(--border-color);
+            max-width: 400px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        label {
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        textarea {
+            flex: 1;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            color: var(--text-color);
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            padding: 1rem;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent);
+        }
+
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            background-color: var(--border-color);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .right-panel {
+            background-color: #0b1121;
+            position: relative;
+        }
+
+        #output-container {
+            flex: 1;
+            overflow-y: auto;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            /* Custom scrollbar */
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) transparent;
+        }
+
+        #output-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        #output-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #output-container::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+            border-radius: 4px;
+        }
+
+        /* Message Types */
+        .message {
+            border-radius: 0.5rem;
+            padding: 1rem;
+            line-height: 1.6;
+            animation: fadeIn 0.3s ease-out;
+            max-width: 100%;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-thinking {
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            font-family: var(--font-main);
+        }
+
+        /* Formatted markdown-like elements */
+        .msg-thinking strong {
+            color: #60a5fa;
+        }
+
+        .msg-tool-call {
+            background-color: var(--tool-bg);
+            border-left: 4px solid var(--tool-border);
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+        }
+
+        .tool-header {
+            color: #818cf8;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tool-header::before {
+            content: "⚙️";
+        }
+
+        .tool-args, .tool-result {
+            background-color: rgba(0,0,0,0.3);
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            overflow-x: auto;
+            color: #a78bfa;
+            margin: 0;
+            font-size: 0.8125rem;
+        }
+
+        .msg-tool-result {
+            background-color: var(--tool-bg);
+            border-left: 4px solid #10b981;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            margin-top: -0.5rem; /* pull up closer to the tool call */
+        }
+        
+        .msg-tool-result .tool-header {
+            color: #34d399;
+        }
+
+        .msg-tool-result .tool-header::before {
+            content: "✓";
+        }
+        
+        .msg-tool-result .tool-result {
+            color: #a3e635;
+        }
+
+        .msg-verdict {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            padding: 1.5rem;
+        }
+
+        .msg-verdict.false-positive {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-color: var(--success);
+        }
+        
+        .msg-verdict.true-positive {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger);
+        }
+
+        .verdict-header {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .verdict-content {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            background-color: rgba(0,0,0,0.3);
+            padding: 1rem;
+            border-radius: 0.25rem;
+            overflow-x: auto;
+        }
+
+        .msg-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--danger);
+            color: #fca5a5;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+        }
+
+        /* Markdown bold styling hack */
+        .bold {
+            font-weight: 600;
+            color: #60a5fa;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: var(--text-color);
+            box-shadow: 12px 0 var(--text-color), -12px 0 var(--text-color);
+            animation: typing 1s infinite linear;
+            margin-left: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .loader.visible {
+            opacity: 1;
+        }
+
+        @keyframes typing {
+            0% { box-shadow: 12px 0 rgba(226, 232, 240, 0.2), -12px 0 rgba(226, 232, 240, 0.2); background-color: rgba(226, 232, 240, 1); }
+            33% { box-shadow: 12px 0 rgba(226, 232, 240, 1), -12px 0 rgba(226, 232, 240, 0.2); background-color: rgba(226, 232, 240, 0.2); }
+            66% { box-shadow: 12px 0 rgba(226, 232, 240, 0.2), -12px 0 rgba(226, 232, 240, 1); background-color: rgba(226, 232, 240, 0.2); }
+        }
+
+        /* Default sample JSON to put in textarea */
+        .sample-data {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🕵️‍♂️ AML SAR Investigator</h1>
+        <div id="status-indicator" class="status-badge">Ready</div>
+    </header>
+
+    <main>
+        <div class="panel left-panel">
+            <div class="input-group">
+                <label for="alert-input">Alert JSON Payload</label>
+                <textarea id="alert-input" placeholder="Paste the alert JSON here..."></textarea>
+            </div>
+            <button id="investigate-btn">Start Investigation</button>
+            <button id="load-sample-btn" style="background-color: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-muted); margin-top: -0.5rem;">Load Sample Alert</button>
+        </div>
+
+        <div class="panel right-panel">
+            <div id="output-container">
+                <div class="message msg-thinking" style="color: var(--text-muted); text-align: center; margin-top: 5rem;">
+                    Waiting for an alert to investigate...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Use the native Fetch API directly with a custom stream reader polyfill approach
+        // since standard EventSource doesn't support POST requests
+        
+        const investigateBtn = document.getElementById('investigate-btn');
+        const loadSampleBtn = document.getElementById('load-sample-btn');
+        const alertInput = document.getElementById('alert-input');
+        const outputContainer = document.getElementById('output-container');
+        const statusIndicator = document.getElementById('status-indicator');
+        
+        let currentThinkingBlock = null;
+
+        // Sample Data
+        const sampleFP = {
+            "alert_id": "ALT-2023-11-20-001",
+            "customer_id": "CUST-88392",
+            "alert_date": "2023-11-20",
+            "rule_triggered": "RULE-01-STRUCTURING",
+            "transaction_window": {
+                "start_date": "2023-10-15",
+                "end_date": "2023-11-20"
+            },
+            "trigger_events": [
+                {
+                    "transaction_id": "TRX-99882-A",
+                    "date": "2023-11-12",
+                    "amount": 9500.00,
+                    "type": "CASH_DEPOSIT"
+                },
+                {
+                    "transaction_id": "TRX-99885-B",
+                    "date": "2023-11-15",
+                    "amount": 9800.00,
+                    "type": "CASH_DEPOSIT"
+                }
+            ],
+            "total_alert_amount": 19300.00,
+            "risk_score": 65,
+            "previous_sars": 0,
+            "source_system": "Actimize",
+            "assigned_team": "L1_Triage"
+        };
+
+        loadSampleBtn.addEventListener('click', () => {
+            alertInput.value = JSON.stringify(sampleFP, null, 2);
+        });
+        
+        // Auto-load sample on startup
+        alertInput.value = JSON.stringify(sampleFP, null, 2);
+
+        function setStatus(text, isActive = false) {
+            statusIndicator.textContent = text;
+            if (isActive) {
+                statusIndicator.classList.add('active');
+            } else {
+                statusIndicator.classList.remove('active');
+            }
+        }
+
+        function scrollToBottom() {
+            outputContainer.scrollTop = outputContainer.scrollHeight;
+        }
+
+        // Apply basic markdown formatting for thinking text
+        function formatThinking(text) {
+            return text
+                .replace(/\*([^\*]+)\*/g, '<span class="bold">$1</span>')
+                .replace(/\*\*([^\*]+)\*\*/g, '<span class="bold">$1</span>');
+        }
+
+        function appendThinking(text) {
+            if (!currentThinkingBlock) {
+                currentThinkingBlock = document.createElement('div');
+                currentThinkingBlock.className = 'message msg-thinking';
+                
+                // Add blinking cursor
+                const cursor = document.createElement('div');
+                cursor.className = 'loader visible';
+                
+                outputContainer.appendChild(currentThinkingBlock);
+                outputContainer.appendChild(cursor);
+            }
+            
+            // Append exactly as-is but format bold text
+            currentThinkingBlock.innerHTML += formatThinking(text);
+            scrollToBottom();
+        }
+
+        function finalizeThinkingBlock() {
+            if (currentThinkingBlock) {
+                currentThinkingBlock = null;
+                // Remove loaders
+                document.querySelectorAll('.loader').forEach(e => e.remove());
+            }
+        }
+
+        function playToolCall(data) {
+            finalizeThinkingBlock();
+            
+            const div = document.createElement('div');
+            div.className = 'message msg-tool-call';
+            
+            const header = document.createElement('div');
+            header.className = 'tool-header';
+            header.textContent = `Calling Tool: ${data.tool}`;
+            
+            const args = document.createElement('pre');
+            args.className = 'tool-args';
+            args.textContent = JSON.stringify(data.arguments, null, 2);
+            
+            div.appendChild(header);
+            div.appendChild(args);
+            outputContainer.appendChild(div);
+            scrollToBottom();
+        }
+
+        function playToolResult(data) {
+            finalizeThinkingBlock();
+            
+            const div = document.createElement('div');
+            div.className = 'message msg-tool-result';
+            
+            const header = document.createElement('div');
+            header.className = 'tool-header';
+            header.textContent = `Result Received`;
+            
+            const result = document.createElement('pre');
+            result.className = 'tool-result';
+            result.textContent = typeof data.result === 'object' 
+                ? JSON.stringify(data.result, null, 2) 
+                : data.result;
+            
+            div.appendChild(header);
+            div.appendChild(result);
+            outputContainer.appendChild(div);
+            scrollToBottom();
+        }
+
+        function playVerdict(data) {
+            finalizeThinkingBlock();
+            
+            const isSAR = data.verdict === 'TRUE_POSITIVE';
+            
+            const div = document.createElement('div');
+            div.className = `message msg-verdict ${isSAR ? 'true-positive' : 'false-positive'}`;
+            
+            const header = document.createElement('div');
+            header.className = 'verdict-header';
+            header.innerHTML = isSAR ? "🚨 TRUE POSITIVE - SAR RECOMMENDED" : "✅ FALSE POSITIVE - NO SUSPICIOUS ACTIVITY";
+            
+            const result = document.createElement('pre');
+            result.className = 'verdict-content';
+            result.textContent = JSON.stringify(data, null, 2);
+            
+            div.appendChild(header);
+            div.appendChild(result);
+            outputContainer.appendChild(div);
+            scrollToBottom();
+        }
+
+        function playError(data) {
+            finalizeThinkingBlock();
+            
+            const div = document.createElement('div');
+            div.className = 'message msg-error';
+            div.textContent = `Error: ${data.message}`;
+            outputContainer.appendChild(div);
+            scrollToBottom();
+        }
+
+        async function fetchSSE(url, options, onEvent) {
+            try {
+                const response = await fetch(url, options);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // Parse SSE format
+                    const events = buffer.split('\n\n');
+                    buffer = events.pop(); // Keep the last incomplete chunk in buffer
+                    
+                    for (const eventStr of events) {
+                        if (!eventStr.trim()) continue;
+                        
+                        const lines = eventStr.split('\n');
+                        let eventType = 'message';
+                        let eventData = '';
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('event:')) {
+                                eventType = line.substring(6).trim();
+                            } else if (line.startsWith('data:')) {
+                                eventData += line.substring(5).trim();
+                            }
+                        }
+                        
+                        if (eventData) {
+                            try {
+                                const parsedData = JSON.parse(eventData);
+                                onEvent(eventType, parsedData);
+                            } catch (e) {
+                                console.error('Failed to parse SSE JSON data:', e, eventData);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                playError({ message: error.message });
+            } finally {
+                setStatus('Ready', false);
+                investigateBtn.disabled = false;
+                finalizeThinkingBlock();
+            }
+        }
+
+        investigateBtn.addEventListener('click', () => {
+            let payload;
+            try {
+                payload = JSON.parse(alertInput.value);
+            } catch (e) {
+                alert('Invalid JSON in input box');
+                return;
+            }
+
+            // Clear output
+            outputContainer.innerHTML = '';
+            currentThinkingBlock = null;
+            
+            // UI State
+            setStatus('Investigating...', true);
+            investigateBtn.disabled = true;
+            
+            // We use fetch instead of EventSource because EventSource doesn't support POST
+            fetchSSE('http://127.0.0.1:8000/investigate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'text/event-stream'
+                },
+                body: JSON.stringify(payload)
+            }, (eventType, data) => {
+                // Event Router
+                if (eventType === 'thinking') {
+                    if (data.content) {
+                        appendThinking(data.content);
+                    }
+                } else if (eventType === 'tool_call') {
+                    playToolCall(data);
+                } else if (eventType === 'tool_result') {
+                    playToolResult(data);
+                } else if (eventType === 'verdict') {
+                    playVerdict(data);
+                    setStatus('Investigation Complete', false);
+                    investigateBtn.disabled = false;
+                } else if (eventType === 'error') {
+                    playError(data);
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>

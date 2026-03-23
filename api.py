@@ -10,7 +10,9 @@ Run with:  uvicorn api:app --reload
 import json
 import re
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessageChunk
 
 from schemas.alert import AlertPayload
@@ -21,6 +23,15 @@ app = FastAPI(
     title="AML SAR Investigator API",
     description="Real-time AML investigation via Server-Sent Events",
     version="1.0.0",
+)
+
+# Add CORS middleware to allow the frontend to access the API when testing locally
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -179,3 +190,13 @@ async def investigate(alert: AlertPayload):
 async def health():
     """Health check endpoint."""
     return {"status": "ok"}
+
+
+@app.get("/")
+async def root():
+    """Serve the frontend HTML test client."""
+    import os
+    index_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"message": "API is running. index.html not found."}
