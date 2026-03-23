@@ -1,9 +1,9 @@
 {
-    "alert_id": "ALT-INVEST-FP2",
+    "alert_id": "ALT-INVEST-34252345",
     "generated_at": "2024-11-13T09:00:00Z",
     "alert_source": "TRANSACTION_MONITORING_SYSTEM",
     "alert_type": "HIGH_VOLUME_INBOUND",
-    "severity": "MEDIUM",
+    "severity": "HIGH",
     "customer_id": "CUST-UK-009102",
     "triggered_rules": [
         "RULE-01",
