@@ -341,11 +341,16 @@
     <main>
         <div class="panel left-panel">
             <div class="input-group">
+                <label for="alert-select">Select a Sample Alert:</label>
+                <select id="alert-select" style="padding: 0.75rem; border-radius: 0.5rem; background-color: var(--panel-bg); color: var(--text-color); border: 1px solid var(--border-color); outline: none; font-family: var(--font-main); font-size: 0.875rem; transition: border-color 0.2s;">
+                    <option value="">-- Loading alerts... --</option>
+                </select>
+            </div>
+            <div class="input-group">
                 <label for="alert-input">Alert JSON Payload</label>
                 <textarea id="alert-input" placeholder="Paste the alert JSON here..."></textarea>
             </div>
             <button id="investigate-btn">Start Investigation</button>
-            <button id="load-sample-btn" style="background-color: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-muted); margin-top: -0.5rem;">Load Sample Alert</button>
         </div>
 
         <div class="panel right-panel">
@@ -362,50 +367,74 @@
         // since standard EventSource doesn't support POST requests
         
         const investigateBtn = document.getElementById('investigate-btn');
-        const loadSampleBtn = document.getElementById('load-sample-btn');
+        const alertSelect = document.getElementById('alert-select');
         const alertInput = document.getElementById('alert-input');
         const outputContainer = document.getElementById('output-container');
         const statusIndicator = document.getElementById('status-indicator');
         
         let currentThinkingBlock = null;
+        let loadedAlerts = {};
 
-        // Sample Data
-        const sampleFP = {
-            "alert_id": "ALT-2023-11-20-001",
-            "customer_id": "CUST-88392",
-            "alert_date": "2023-11-20",
-            "rule_triggered": "RULE-01-STRUCTURING",
-            "transaction_window": {
-                "start_date": "2023-10-15",
-                "end_date": "2023-11-20"
-            },
-            "trigger_events": [
-                {
-                    "transaction_id": "TRX-99882-A",
-                    "date": "2023-11-12",
-                    "amount": 9500.00,
-                    "type": "CASH_DEPOSIT"
-                },
-                {
-                    "transaction_id": "TRX-99885-B",
-                    "date": "2023-11-15",
-                    "amount": 9800.00,
-                    "type": "CASH_DEPOSIT"
+        // Fetch sample alerts on load
+        async function fetchSampleAlerts() {
+            try {
+                const response = await fetch('/api/alerts');
+                if (!response.ok) throw new Error('Failed to fetch alerts');
+                const data = await response.json();
+                
+                alertSelect.innerHTML = '<option value="">-- Select an alert to load --</option>';
+                
+                if (data.fp && data.fp.length > 0) {
+                    const groupFP = document.createElement('optgroup');
+                    groupFP.label = 'False Positives';
+                    data.fp.forEach(alert => {
+                        const opt = document.createElement('option');
+                        const id = `fp_${alert.name}`;
+                        loadedAlerts[id] = alert.content;
+                        opt.value = id;
+                        opt.textContent = `✅ ${alert.name.replace('.json', '')}`;
+                        groupFP.appendChild(opt);
+                    });
+                    alertSelect.appendChild(groupFP);
                 }
-            ],
-            "total_alert_amount": 19300.00,
-            "risk_score": 65,
-            "previous_sars": 0,
-            "source_system": "Actimize",
-            "assigned_team": "L1_Triage"
-        };
+                
+                if (data.tp && data.tp.length > 0) {
+                    const groupTP = document.createElement('optgroup');
+                    groupTP.label = 'True Positives';
+                    data.tp.forEach(alert => {
+                        const opt = document.createElement('option');
+                        const id = `tp_${alert.name}`;
+                        loadedAlerts[id] = alert.content;
+                        opt.value = id;
+                        opt.textContent = `🚨 ${alert.name.replace('.json', '')}`;
+                        groupTP.appendChild(opt);
+                    });
+                    alertSelect.appendChild(groupTP);
+                }
+                
+                // Auto-select the first FP if available
+                if (data.fp && data.fp.length > 0) {
+                    const firstId = `fp_${data.fp[0].name}`;
+                    alertSelect.value = firstId;
+                    alertInput.value = JSON.stringify(loadedAlerts[firstId], null, 2);
+                }
+                
+            } catch (error) {
+                console.error('Error fetching alerts:', error);
+                alertSelect.innerHTML = '<option value="">-- Error loading alerts --</option>';
+            }
+        }
 
-        loadSampleBtn.addEventListener('click', () => {
-            alertInput.value = JSON.stringify(sampleFP, null, 2);
+        document.addEventListener('DOMContentLoaded', fetchSampleAlerts);
+
+        alertSelect.addEventListener('change', (e) => {
+            const id = e.target.value;
+            if (id && loadedAlerts[id]) {
+                alertInput.value = JSON.stringify(loadedAlerts[id], null, 2);
+            } else {
+                alertInput.value = '';
+            }
         });
-        
-        // Auto-load sample on startup
-        alertInput.value = JSON.stringify(sampleFP, null, 2);
 
         function setStatus(text, isActive = false) {
             statusIndicator.textContent = text;

@@ -192,6 +192,31 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/api/alerts")
+async def get_alerts():
+    """Return a list of available sample alerts from tests/sample_alerts."""
+    import os
+    import glob
+    alerts = {"fp": [], "tp": []}
+    base_dir = os.path.join(os.path.dirname(__file__), "tests", "sample_alerts")
+    
+    for category in ["fp", "tp"]:
+        cat_dir = os.path.join(base_dir, category)
+        if os.path.exists(cat_dir):
+            for file_path in glob.glob(os.path.join(cat_dir, "*.json")):
+                filename = os.path.basename(file_path)
+                with open(file_path, "r") as f:
+                    try:
+                        content = json.load(f)
+                        alerts[category].append({"name": filename, "content": content})
+                    except Exception:
+                        pass
+            # sort by filename
+            alerts[category].sort(key=lambda x: x["name"])
+            
+    return alerts
+
+
 @app.get("/")
 async def root():
     """Serve the frontend HTML test client."""
