@@ -206,39 +206,54 @@
             return null;
         }
 
-        // Compare agent's claimed values against the actual DB row
+        // Compare agent's claimed values against the actual DB row.
+        // Uses SET-MEMBERSHIP checks: does the row's value exist ANYWHERE
+        // in the agent's claimed arrays (not index-paired).
         function buildVerificationRows(dbRow, agentClaims) {
             const checks = [];
             if (!agentClaims) return checks;
             const sd = agentClaims.supporting_data;
 
-            // Check amounts
-            if (sd.amounts && dbRow.amount_gbp !== undefined) {
-                for (const claimed of sd.amounts) {
-                    const claimedNum = parseCurrencyToNumber(claimed);
-                    const actual = dbRow.amount_gbp;
-                    checks.push({
-                        field: 'amount_gbp',
-                        claimed: claimed,
-                        actual: `£${Number(actual).toLocaleString()}`,
-                        match: Math.abs(claimedNum - actual) < 1
-                    });
-                }
+            // Check: does this row's amount_gbp exist in the claimed amounts array?
+            if (sd.amounts && sd.amounts.length > 0 && dbRow.amount_gbp !== undefined) {
+                const actual = dbRow.amount_gbp;
+                const claimedNums = sd.amounts.map(a => parseCurrencyToNumber(a));
+                const match = claimedNums.some(n => Math.abs(n - actual) < 1);
+                checks.push({
+                    field: 'amount_gbp',
+                    claimed: sd.amounts.join(', '),
+                    actual: `\u00a3${Number(actual).toLocaleString()}`,
+                    match
+                });
             }
-            // Check dates
-            if (sd.dates && dbRow.transaction_datetime) {
-                for (const claimed of sd.dates) {
-                    const match = dbRow.transaction_datetime.startsWith(claimed);
-                    checks.push({ field: 'transaction_datetime', claimed, actual: dbRow.transaction_datetime, match });
-                }
+
+            // Check: does this row's date exist anywhere in the claimed dates array?
+            if (sd.dates && sd.dates.length > 0 && dbRow.transaction_datetime) {
+                const actual = dbRow.transaction_datetime;
+                const match = sd.dates.some(d => actual.startsWith(d));
+                checks.push({
+                    field: 'transaction_datetime',
+                    claimed: sd.dates.join(', '),
+                    actual,
+                    match
+                });
             }
-            // Check counterparties
-            if (sd.counterparties && dbRow.counterparty_name) {
-                for (const claimed of sd.counterparties) {
-                    const match = dbRow.counterparty_name.toLowerCase().includes(claimed.toLowerCase()) || claimed.toLowerCase().includes(dbRow.counterparty_name.toLowerCase());
-                    checks.push({ field: 'counterparty_name', claimed, actual: dbRow.counterparty_name, match });
-                }
+
+            // Check: does this row's counterparty exist anywhere in the claimed counterparties array?
+            if (sd.counterparties && sd.counterparties.length > 0 && dbRow.counterparty_name) {
+                const actual = dbRow.counterparty_name;
+                const match = sd.counterparties.some(cp =>
+                    actual.toLowerCase().includes(cp.toLowerCase()) ||
+                    cp.toLowerCase().includes(actual.toLowerCase())
+                );
+                checks.push({
+                    field: 'counterparty_name',
+                    claimed: sd.counterparties.join(', '),
+                    actual,
+                    match
+                });
             }
+
             return checks;
         }
 
@@ -302,10 +317,17 @@
                 }
                 const dbRow = result.data;
                 let checks = [];
+
                 if (table === 'transactions') {
                     const claims = getAgentClaimsForTransaction(id);
+                    // RULE-07 entries have no transaction_ids — skip verification
+                    if (claims && claims.evidence && claims.evidence.rule_mapped === 'RULE-07') {
+                        drawerContent.innerHTML = `<div class="mb-4 p-3 rounded border bg-slate-50 border-slate-200 text-xs text-slate-500 italic">Profile data \u2014 transaction verification not applicable</div>` + renderDrawerRow(table, dbRow, []);
+                        return;
+                    }
                     checks = buildVerificationRows(dbRow, claims);
                 }
+                // Accounts: just show existence (the row itself is the proof)
                 drawerContent.innerHTML = renderDrawerRow(table, dbRow, checks);
             } catch (err) {
                 drawerContent.innerHTML = `<div class="text-sm text-red-500">Failed to fetch: ${err.message}</div>`;
