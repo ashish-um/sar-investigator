@@ -1,0 +1,32 @@
+<!-- Left Panel — Alert Input -->
+<div class="w-[420px] min-w-[360px] flex flex-col p-6 gap-5 bg-white border-r border-slate-200 shadow-[2px_0_8px_rgba(0,0,0,0.02)] z-10">
+
+    <!-- Alert Selector -->
+    <div class="flex flex-col gap-2">
+        <label for="alert-select" class="text-xs font-semibold tracking-wider text-slate-500">
+            SAMPLE ALERT
+        </label>
+        <select id="alert-select"
+            class="px-4 py-3 rounded text-slate-800 border border-slate-300 outline-none font-sans text-sm transition-all duration-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 hover:border-slate-400 cursor-pointer appearance-none shadow-sm"
+            style="background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2364748b%22 stroke-width=%222%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem;">
+            <option value="">-- Loading alerts... --</option>
+        </select>
+    </div>
+
+    <!-- JSON Textarea -->
+    <div class="flex flex-col gap-2 flex-1 min-h-0">
+        <label for="alert-input" class="text-xs font-semibold tracking-wider text-slate-500">
+            ALERT JSON PAYLOAD
+        </label>
+        <textarea id="alert-input"
+            placeholder="Paste the alert JSON here..."
+            class="flex-1 bg-white border border-slate-300 rounded text-slate-700 font-mono text-xs p-4 resize-none outline-none transition-all duration-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 hover:border-slate-400 placeholder-slate-400 shadow-inner"></textarea>
+    </div>
+
+    <!-- Investigate Button -->
+    <button id="investigate-btn"
+        class="bg-blue-600 hover:bg-blue-700 text-white border-0 rounded px-6 py-3.5 text-sm font-medium cursor-pointer transition-colors duration-200 active:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed shadow-sm flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        START INVESTIGATION
+    </button>
+</div>

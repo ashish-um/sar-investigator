@@ -1,0 +1,65 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AML SAR Investigator</title>
+    <meta name="description" content="Real-time AML investigation dashboard powered by AI">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Roboto', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
+                    },
+                    keyframes: {
+                        typing: {
+                            '0%': { boxShadow: '12px 0 rgba(100,116,139,0.2), -12px 0 rgba(100,116,139,0.2)', backgroundColor: 'rgba(100,116,139,1)' },
+                            '33%': { boxShadow: '12px 0 rgba(100,116,139,1), -12px 0 rgba(100,116,139,0.2)', backgroundColor: 'rgba(100,116,139,0.2)' },
+                            '66%': { boxShadow: '12px 0 rgba(100,116,139,0.2), -12px 0 rgba(100,116,139,1)', backgroundColor: 'rgba(100,116,139,0.2)' },
+                        },
+                        fadeIn: {
+                            'from': { opacity: '0', transform: 'translateY(10px)' },
+                            'to': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    },
+                    animation: {
+                        'typing': 'typing 1s infinite linear',
+                        'fade-in': 'fadeIn 0.3s ease-out'
+                    },
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .scrollbar-thin {
+                scrollbar-width: thin;
+                scrollbar-color: #cbd5e1 transparent;
+            }
+            .scrollbar-thin::-webkit-scrollbar {
+                width: 6px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb {
+                background-color: #cbd5e1;
+                border-radius: 3px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+                background-color: #94a3b8;
+            }
+            /* Hide default details marker for custom one */
+            details > summary {
+                list-style: none;
+            }
+            details > summary::-webkit-details-marker {
+                display: none;
+            }
+        }
+    </style>
+</head>
