@@ -1,0 +1,17 @@
+{
+    "alert_id": "ALT-INVEST-FP2",
+    "generated_at": "2024-11-13T09:00:00Z",
+    "alert_source": "TRANSACTION_MONITORING_SYSTEM",
+    "alert_type": "HIGH_VOLUME_INBOUND",
+    "severity": "MEDIUM",
+    "customer_id": "CUST-UK-009102",
+    "triggered_rules": [
+        "RULE-01",
+        "RULE-06"
+    ],
+    "observation_window_start": "2024-11-01",
+    "observation_window_end": "2024-11-15",
+    "total_flagged_transactions": 6,
+    "flagged_amount_gbp": 38952.75,
+    "alert_narrative": ""
+}

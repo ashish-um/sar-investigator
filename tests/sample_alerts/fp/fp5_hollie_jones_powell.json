@@ -1,0 +1,16 @@
+{
+    "alert_id": "ALT-INVEST-FP5",
+    "generated_at": "2024-11-15T11:00:00Z",
+    "alert_source": "TRANSACTION_MONITORING_SYSTEM",
+    "alert_type": "RAPID_MOVEMENT_OF_FUNDS",
+    "severity": "LOW",
+    "customer_id": "CUST-UK-050003",
+    "triggered_rules": [
+        "RULE-02"
+    ],
+    "observation_window_start": "2024-11-01",
+    "observation_window_end": "2024-11-15",
+    "total_flagged_transactions": 5,
+    "flagged_amount_gbp": 5570.43,
+    "alert_narrative": ""
+}

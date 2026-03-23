@@ -1,0 +1,17 @@
+{
+    "alert_id": "ALT-INVEST-TP6",
+    "generated_at": "2024-11-15T14:00:00Z",
+    "alert_source": "TRANSACTION_MONITORING_SYSTEM",
+    "alert_type": "SANCTIONS_PROXIMITY_HIGH_RISK_JURISDICTION",
+    "severity": "CRITICAL",
+    "customer_id": "CUST-UK-015202",
+    "triggered_rules": [
+        "RULE-07",
+        "RULE-03"
+    ],
+    "observation_window_start": "2024-01-01",
+    "observation_window_end": "2024-11-15",
+    "total_flagged_transactions": 4,
+    "flagged_amount_gbp": 200035.00,
+    "alert_narrative": ""
+}
