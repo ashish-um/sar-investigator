@@ -226,3 +226,48 @@ async def get_alerts():
 async def root(request: Request):
     """Serve the frontend HTML test client."""
     return templates.TemplateResponse(request, "index.html", {"llm_config": get_llm_config()})
+
+
+# ── Data Lookup Endpoints (Evidence Verification) ────────────────────────
+
+_TABLE_PRIMARY_KEYS = {
+    "transactions": "transaction_id",
+    "accounts": "account_id",
+    "customers": "customer_id",
+    "aml_alerts_history": "alert_id",
+}
+
+
+@app.get("/data/transactions/counterparty/{name}")
+async def get_transactions_by_counterparty(name: str):
+    """Return all transaction rows matching a counterparty name."""
+    from tools.db import get_connection
+
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "SELECT * FROM transactions WHERE counterparty_name = ?", (name,)
+        )
+        rows = cursor.fetchall()
+        if not rows:
+            return {"error": f"No transactions found for counterparty: {name}", "rows": []}
+        return {"rows": [dict(row) for row in rows]}
+
+
+@app.get("/data/{table}/{record_id}")
+async def get_data_record(table: str, record_id: str):
+    """Return a single raw database row by primary key."""
+    from tools.db import get_connection
+
+    if table not in _TABLE_PRIMARY_KEYS:
+        return {"error": f"Unknown table: {table}. Valid: {list(_TABLE_PRIMARY_KEYS.keys())}"}
+
+    pk = _TABLE_PRIMARY_KEYS[table]
+
+    with get_connection() as conn:
+        cursor = conn.execute(
+            f"SELECT * FROM {table} WHERE {pk} = ?", (record_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return {"error": f"No record found: {table}/{record_id}"}
+        return {"table": table, "id": record_id, "data": dict(row)}
