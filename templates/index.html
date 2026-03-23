@@ -4,39 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AML SAR Investigator</title>
-    <meta name="description" content="Real-time AML investigation dashboard powered by AI — stream investigations via Server-Sent Events">
+    <meta name="description" content="Real-time AML investigation dashboard powered by AI">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        sans: ['Roboto', 'system-ui', '-apple-system', 'sans-serif'],
                         mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
                     },
                     keyframes: {
-                        pulseGlow: {
-                            '0%': { boxShadow: '0 0 0 0 rgba(99, 102, 241, 0.5)' },
-                            '70%': { boxShadow: '0 0 0 8px rgba(99, 102, 241, 0)' },
-                            '100%': { boxShadow: '0 0 0 0 rgba(99, 102, 241, 0)' },
-                        },
-                        fadeSlideIn: {
-                            'from': { opacity: '0', transform: 'translateY(12px)' },
-                            'to': { opacity: '1', transform: 'translateY(0)' },
-                        },
                         typing: {
-                            '0%': { boxShadow: '12px 0 rgba(226,232,240,0.2), -12px 0 rgba(226,232,240,0.2)', backgroundColor: 'rgba(226,232,240,1)' },
-                            '33%': { boxShadow: '12px 0 rgba(226,232,240,1), -12px 0 rgba(226,232,240,0.2)', backgroundColor: 'rgba(226,232,240,0.2)' },
-                            '66%': { boxShadow: '12px 0 rgba(226,232,240,0.2), -12px 0 rgba(226,232,240,1)', backgroundColor: 'rgba(226,232,240,0.2)' },
+                            '0%': { boxShadow: '12px 0 rgba(100,116,139,0.2), -12px 0 rgba(100,116,139,0.2)', backgroundColor: 'rgba(100,116,139,1)' },
+                            '33%': { boxShadow: '12px 0 rgba(100,116,139,1), -12px 0 rgba(100,116,139,0.2)', backgroundColor: 'rgba(100,116,139,0.2)' },
+                            '66%': { boxShadow: '12px 0 rgba(100,116,139,0.2), -12px 0 rgba(100,116,139,1)', backgroundColor: 'rgba(100,116,139,0.2)' },
                         },
+                        fadeIn: {
+                            'from': { opacity: '0', transform: 'translateY(10px)' },
+                            'to': { opacity: '1', transform: 'translateY(0)' },
+                        }
                     },
                     animation: {
-                        'pulse-glow': 'pulseGlow 2s infinite',
-                        'fade-slide-in': 'fadeSlideIn 0.3s ease-out',
                         'typing': 'typing 1s infinite linear',
+                        'fade-in': 'fadeIn 0.3s ease-out'
                     },
                 },
             },
@@ -46,7 +40,7 @@
         @layer utilities {
             .scrollbar-thin {
                 scrollbar-width: thin;
-                scrollbar-color: #334155 transparent;
+                scrollbar-color: #cbd5e1 transparent;
             }
             .scrollbar-thin::-webkit-scrollbar {
                 width: 6px;
@@ -55,88 +49,100 @@
                 background: transparent;
             }
             .scrollbar-thin::-webkit-scrollbar-thumb {
-                background-color: #334155;
+                background-color: #cbd5e1;
                 border-radius: 3px;
             }
             .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-                background-color: #475569;
+                background-color: #94a3b8;
+            }
+            /* Hide default details marker for custom one */
+            details > summary {
+                list-style: none;
+            }
+            details > summary::-webkit-details-marker {
+                display: none;
             }
         }
     </style>
 </head>
-<body class="m-0 p-0 font-sans bg-slate-950 text-slate-200 h-screen flex flex-col overflow-hidden">
+<body class="m-0 p-0 font-sans bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <header class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/50 px-6 py-4 flex justify-between items-center shadow-lg shadow-slate-950/50">
-        <h1 class="text-xl font-bold flex items-center gap-3 m-0">
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center z-10">
+        <h1 class="text-xl font-medium flex items-center gap-3 m-0 text-slate-800">
             <span class="text-2xl">🕵️‍♂️</span>
-            <span class="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">AML SAR Investigator</span>
+            <span>AML SAR Investigator</span>
         </h1>
-        <div id="status-indicator" class="text-sm px-4 py-1.5 rounded-full bg-slate-700/50 text-slate-400 font-medium border border-slate-600/30 transition-all duration-300">
+        <div id="status-indicator" class="text-sm px-4 py-1.5 rounded-full bg-slate-100 text-slate-500 font-medium border border-slate-200 transition-all duration-300">
             Ready
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="flex flex-1 overflow-hidden">
+    <main class="flex flex-1 overflow-hidden relative">
 
         <!-- Left Panel — Alert Input -->
-        <div class="w-[420px] min-w-[360px] flex flex-col p-5 gap-4 border-r border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
+        <div class="w-[420px] min-w-[360px] flex flex-col p-6 gap-5 bg-white border-r border-slate-200 shadow-[2px_0_8px_rgba(0,0,0,0.02)] z-10">
 
             <!-- Alert Selector -->
             <div class="flex flex-col gap-2">
-                <label for="alert-select" class="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Sample Alert
+                <label for="alert-select" class="text-xs font-semibold tracking-wider text-slate-500">
+                    SAMPLE ALERT
                 </label>
                 <select id="alert-select"
-                    class="px-4 py-2.5 rounded-lg bg-slate-800/80 text-slate-200 border border-slate-600/50 outline-none font-sans text-sm transition-all duration-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 hover:border-slate-500 cursor-pointer appearance-none"
-                    style="background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2394a3b8%22 stroke-width=%222%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem;">
+                    class="px-4 py-3 rounded text-slate-800 border border-slate-300 outline-none font-sans text-sm transition-all duration-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 hover:border-slate-400 cursor-pointer appearance-none shadow-sm"
+                    style="background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2364748b%22 stroke-width=%222%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem;">
                     <option value="">-- Loading alerts... --</option>
                 </select>
             </div>
 
             <!-- JSON Textarea -->
             <div class="flex flex-col gap-2 flex-1 min-h-0">
-                <label for="alert-input" class="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Alert JSON Payload
+                <label for="alert-input" class="text-xs font-semibold tracking-wider text-slate-500">
+                    ALERT JSON PAYLOAD
                 </label>
                 <textarea id="alert-input"
                     placeholder="Paste the alert JSON here..."
-                    class="flex-1 bg-slate-800/80 border border-slate-600/50 rounded-lg text-slate-200 font-mono text-sm p-4 resize-none outline-none transition-all duration-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder-slate-500"></textarea>
+                    class="flex-1 bg-white border border-slate-300 rounded text-slate-700 font-mono text-xs p-4 resize-none outline-none transition-all duration-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 hover:border-slate-400 placeholder-slate-400 shadow-inner"></textarea>
             </div>
 
             <!-- Investigate Button -->
             <button id="investigate-btn"
-                class="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white border-0 rounded-lg px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-200 active:scale-[0.98] disabled:bg-none disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed disabled:transform-none shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30">
-                <span class="flex items-center justify-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    Start Investigation
-                </span>
+                class="bg-blue-600 hover:bg-blue-700 text-white border-0 rounded px-6 py-3.5 text-sm font-medium cursor-pointer transition-colors duration-200 active:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed shadow-sm flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                START INVESTIGATION
             </button>
         </div>
 
         <!-- Right Panel — Investigation Stream -->
-        <div class="flex-1 flex flex-col bg-slate-950/80 relative">
+        <div class="flex-1 flex flex-col bg-slate-50 relative">
             <div id="output-container"
-                class="flex-1 overflow-y-auto rounded-xl m-4 p-4 flex flex-col gap-3 scrollbar-thin">
-                <div class="text-slate-500 text-center mt-20 flex flex-col items-center gap-4">
-                    <svg class="w-16 h-16 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    <p class="text-lg font-medium">Waiting for an alert to investigate...</p>
-                    <p class="text-sm text-slate-600">Select a sample alert or paste JSON to begin</p>
+                class="flex-1 overflow-y-auto m-6 p-2 flex flex-col gap-3 scrollbar-thin pb-24">
+                <div class="text-slate-400 text-center mt-32 flex flex-col items-center gap-4">
+                    <svg class="w-16 h-16 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <p class="text-lg font-medium text-slate-500">Waiting for an alert</p>
+                    <p class="text-sm">Select a sample alert or paste JSON to begin.</p>
                 </div>
+            </div>
+            
+            <!-- Persistent Running Indicator -->
+            <div id="running-indicator" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white border border-slate-200 shadow-md rounded-full px-5 py-2.5 hidden items-center gap-3 z-20">
+                <div class="flex items-center justify-center relative w-4 h-4">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                </div>
+                <span class="text-sm font-medium text-slate-600">Agent is running...</span>
             </div>
         </div>
     </main>
 
     <script>
-        // Use the native Fetch API directly with a custom stream reader polyfill approach
-        // since standard EventSource doesn't support POST requests
-        
         const investigateBtn = document.getElementById('investigate-btn');
         const alertSelect = document.getElementById('alert-select');
         const alertInput = document.getElementById('alert-input');
         const outputContainer = document.getElementById('output-container');
         const statusIndicator = document.getElementById('status-indicator');
+        const runningIndicator = document.getElementById('running-indicator');
         
         let currentThinkingBlock = null;
         let loadedAlerts = {};
@@ -205,9 +211,19 @@
         function setStatus(text, isActive = false) {
             statusIndicator.textContent = text;
             if (isActive) {
-                statusIndicator.className = 'text-sm px-4 py-1.5 rounded-full font-medium border transition-all duration-300 bg-indigo-500/20 text-indigo-300 border-indigo-400/30 animate-pulse-glow';
+                statusIndicator.className = 'text-sm px-4 py-1.5 rounded-full font-medium border transition-all duration-300 bg-blue-50 text-blue-600 border-blue-200';
             } else {
-                statusIndicator.className = 'text-sm px-4 py-1.5 rounded-full font-medium border transition-all duration-300 bg-slate-700/50 text-slate-400 border-slate-600/30';
+                statusIndicator.className = 'text-sm px-4 py-1.5 rounded-full font-medium border transition-all duration-300 bg-slate-100 text-slate-500 border-slate-200';
+            }
+        }
+
+        function toggleRunningIndicator(show) {
+            if (show) {
+                runningIndicator.classList.remove('hidden');
+                runningIndicator.classList.add('flex');
+            } else {
+                runningIndicator.classList.add('hidden');
+                runningIndicator.classList.remove('flex');
             }
         }
 
@@ -218,18 +234,18 @@
         // Apply basic markdown formatting for thinking text
         function formatThinking(text) {
             return text
-                .replace(/\*([^\*]+)\*/g, '<span class="font-semibold text-indigo-400">$1</span>')
-                .replace(/\*\*([^\*]+)\*\*/g, '<span class="font-semibold text-indigo-400">$1</span>');
+                .replace(/\*([^\*]+)\*/g, '<span class="font-semibold text-slate-900">$1</span>')
+                .replace(/\*\*([^\*]+)\*\*/g, '<span class="font-semibold text-slate-900">$1</span>');
         }
 
         function appendThinking(text) {
             if (!currentThinkingBlock) {
                 currentThinkingBlock = document.createElement('div');
-                currentThinkingBlock.className = 'rounded-lg p-4 leading-relaxed animate-fade-slide-in max-w-full text-slate-200 whitespace-pre-wrap font-sans';
+                currentThinkingBlock.className = 'p-2 animate-fade-in max-w-full text-slate-700 whitespace-pre-wrap font-sans text-[0.9375rem] leading-relaxed';
                 
                 // Add blinking cursor
                 const cursor = document.createElement('div');
-                cursor.className = 'loader inline-block w-1 h-1 rounded-full bg-slate-200 animate-typing ml-4 opacity-100 transition-opacity duration-300';
+                cursor.className = 'loader inline-block w-1.5 h-1.5 rounded-full bg-slate-400 animate-typing ml-3 opacity-100 transition-opacity duration-300';
                 
                 outputContainer.appendChild(currentThinkingBlock);
                 outputContainer.appendChild(cursor);
@@ -252,14 +268,14 @@
             finalizeThinkingBlock();
             
             const div = document.createElement('div');
-            div.className = 'rounded-lg p-4 leading-relaxed animate-fade-slide-in max-w-full bg-slate-900/80 border-l-4 border-indigo-500 font-mono text-sm';
+            div.className = 'rounded-md p-4 animate-fade-in max-w-full bg-white border border-slate-200 border-l-4 border-l-blue-500 shadow-sm font-mono text-sm ml-2 mb-1';
             
             const header = document.createElement('div');
-            header.className = 'text-indigo-400 font-bold flex items-center gap-2 mb-2';
+            header.className = 'text-blue-600 font-bold flex items-center gap-2 mb-2 text-xs uppercase tracking-wide';
             header.innerHTML = `<span>⚙️</span> Calling Tool: ${data.tool}`;
             
             const args = document.createElement('pre');
-            args.className = 'bg-black/30 p-3 rounded-md overflow-x-auto text-violet-400 m-0 text-[0.8125rem]';
+            args.className = 'bg-slate-50 border border-slate-100 p-3 rounded overflow-x-auto text-slate-600 m-0 text-xs';
             args.textContent = JSON.stringify(data.arguments, null, 2);
             
             div.appendChild(header);
@@ -271,22 +287,53 @@
         function playToolResult(data) {
             finalizeThinkingBlock();
             
-            const div = document.createElement('div');
-            div.className = 'rounded-lg p-4 leading-relaxed animate-fade-slide-in max-w-full bg-slate-900/80 border-l-4 border-emerald-500 font-mono text-sm -mt-1';
+            const details = document.createElement('details');
+            details.className = 'group rounded-md border border-slate-200 bg-white shadow-sm mb-2 ml-2 transition-all';
             
-            const header = document.createElement('div');
-            header.className = 'text-emerald-400 font-bold flex items-center gap-2 mb-2';
-            header.innerHTML = `<span>✓</span> Result Received`;
+            const summary = document.createElement('summary');
+            // Remove flex from summary, wrap it in a child div instead
+            summary.className = 'cursor-pointer select-none outline-none list-none [&::-webkit-details-marker]:hidden';
+            
+            const summaryContainer = document.createElement('div');
+            summaryContainer.className = 'px-4 py-3 font-medium text-slate-700 hover:bg-slate-50 flex items-center justify-between focus:bg-slate-50';
+            
+            const innerDiv = document.createElement('div');
+            innerDiv.className = 'flex items-center gap-2 text-emerald-600 text-[0.9375rem]';
+            innerDiv.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Result Received</span>
+            `;
+            
+            const chevron = document.createElement('span');
+            chevron.innerHTML = `<svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>`;
+            
+            summaryContainer.appendChild(innerDiv);
+            summaryContainer.appendChild(chevron);
+            summary.appendChild(summaryContainer);
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'p-4 border-t border-slate-200 bg-slate-50 font-mono text-xs overflow-x-auto text-slate-600';
             
             const result = document.createElement('pre');
-            result.className = 'bg-black/30 p-3 rounded-md overflow-x-auto text-lime-400 m-0 text-[0.8125rem]';
+            result.className = 'm-0';
             result.textContent = typeof data.result === 'object' 
                 ? JSON.stringify(data.result, null, 2) 
                 : data.result;
             
-            div.appendChild(header);
-            div.appendChild(result);
-            outputContainer.appendChild(div);
+            contentDiv.appendChild(result);
+            details.appendChild(summary);
+            details.appendChild(contentDiv);
+            
+            // Auto scroll to bottom when expanding
+            details.addEventListener('toggle', (e) => {
+                if(details.open) {
+                    setTimeout(() => {
+                        details.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    }, 50);
+                }
+            });
+            
+            outputContainer.appendChild(details);
             scrollToBottom();
         }
 
@@ -296,14 +343,16 @@
             const isSAR = data.verdict === 'TRUE_POSITIVE';
             
             const div = document.createElement('div');
-            div.className = `rounded-xl p-6 leading-relaxed animate-fade-slide-in max-w-full border ${isSAR ? 'bg-red-500/10 border-red-500/50' : 'bg-emerald-500/10 border-emerald-500/50'}`;
+            div.className = `rounded-md p-6 animate-fade-in max-w-full border shadow-sm mt-4 mb-8 ${isSAR ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`;
             
             const header = document.createElement('div');
-            header.className = `text-xl font-bold mb-4 flex items-center gap-2 ${isSAR ? 'text-red-400' : 'text-emerald-400'}`;
-            header.innerHTML = isSAR ? "🚨 TRUE POSITIVE - SAR RECOMMENDED" : "✅ FALSE POSITIVE - NO SUSPICIOUS ACTIVITY";
+            header.className = `text-lg font-bold mb-4 flex items-center gap-2 ${isSAR ? 'text-red-700' : 'text-green-700'}`;
+            header.innerHTML = isSAR 
+                ? `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> TRUE POSITIVE - SAR RECOMMENDED` 
+                : `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> FALSE POSITIVE - NO SUSPICIOUS ACTIVITY`;
             
             const result = document.createElement('pre');
-            result.className = 'font-mono text-sm whitespace-pre-wrap bg-black/30 p-4 rounded-lg overflow-x-auto text-slate-300';
+            result.className = 'font-mono text-xs whitespace-pre-wrap bg-white border border-slate-200 p-4 rounded text-slate-700 m-0';
             result.textContent = JSON.stringify(data, null, 2);
             
             div.appendChild(header);
@@ -316,7 +365,7 @@
             finalizeThinkingBlock();
             
             const div = document.createElement('div');
-            div.className = 'rounded-lg p-4 leading-relaxed animate-fade-slide-in max-w-full bg-red-500/10 border-l-4 border-red-500 text-red-300 font-mono text-sm';
+            div.className = 'rounded-md p-4 animate-fade-in max-w-full bg-red-50 border border-red-200 border-l-4 border-l-red-500 text-red-700 font-mono text-sm mt-4';
             div.textContent = `Error: ${data.message}`;
             outputContainer.appendChild(div);
             scrollToBottom();
@@ -373,6 +422,7 @@
                 playError({ message: error.message });
             } finally {
                 setStatus('Ready', false);
+                toggleRunningIndicator(false);
                 investigateBtn.disabled = false;
                 finalizeThinkingBlock();
             }
@@ -393,6 +443,7 @@
             
             // UI State
             setStatus('Investigating...', true);
+            toggleRunningIndicator(true);
             investigateBtn.disabled = true;
             
             // We use fetch instead of EventSource because EventSource doesn't support POST
@@ -416,6 +467,7 @@
                 } else if (eventType === 'verdict') {
                     playVerdict(data);
                     setStatus('Investigation Complete', false);
+                    toggleRunningIndicator(false);
                     investigateBtn.disabled = false;
                 } else if (eventType === 'error') {
                     playError(data);
