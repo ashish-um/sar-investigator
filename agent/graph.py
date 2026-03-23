@@ -25,12 +25,50 @@ def should_continue(state: AgentState) -> str:
     return END
 
 
+# Cache the bound LLM so we don't recreate the model on every invocation
+_llm_with_tools = None
+
 def agent_node(state: AgentState) -> dict:
     """Call the LLM with the current message history."""
-    llm = get_llm()
-    llm_with_tools = llm.bind_tools(tools)
-    response = llm_with_tools.invoke(state["messages"])
-    return {"messages": [response]}
+    global _llm_with_tools
+    
+    # Check if we are using groq to determine if we should handle rate limits
+    provider = os.getenv("LLM_PROVIDER", "groq").lower().strip()
+    
+    if _llm_with_tools is None:
+        llm = get_llm()
+        _llm_with_tools = llm.bind_tools(tools)
+        
+    if provider != "groq":
+        # No key hopping for non-Groq providers
+        response = _llm_with_tools.invoke(state["messages"])
+        return {"messages": [response]}
+        
+    import groq
+    from agent.llm import rotate_groq_key, get_groq_key_count
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    attempts = get_groq_key_count()
+    last_error = None
+    
+    for attempt in range(attempts):
+        try:
+            response = _llm_with_tools.invoke(state["messages"])
+            return {"messages": [response]}
+        except groq.RateLimitError as e:
+            last_error = e
+            if attempt < attempts - 1:
+                logger.warning("Rate limit hit in agent_node. Hopping to next Groq key...")
+                # Rotate the key
+                rotate_groq_key()
+                # Rebuild the LLM cache with the new key
+                llm = get_llm()
+                _llm_with_tools = llm.bind_tools(tools)
+            else:
+                logger.error("All Groq API keys exhausted (rate limited).")
+                
+    raise last_error  # type: ignore
 
 
 # Build the graph

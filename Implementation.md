@@ -60,8 +60,15 @@ Groq's free tier has aggressive rate limits (429 errors). To handle this transpa
 
 **Decision Reason:** The retry is implemented as a `ChatGroq` subclass rather than external retry middleware so that key rotation happens *inside* the model — the graph, runner, and tools are completely unaware of it. This also means the retry catches errors mid-stream (during `_stream()`), not just on the initial request.
 
-### The Runner (`agent/runner.py` & `run_investigation.py`)
-This is the entry point. It takes a JSON alert file (like `tests/sample_alerts/true_positive.json`), strips it down to an `AlertPayload`, and injects it into the initial `AgentState`. 
+### The Interfaces (`agent/runner.py`, `run_investigation.py`, and `api.py`)
+The system has two entry points that both orchestrate the same underlying graph:
+
+1. **CLI (`run_investigation.py`)**: Takes a JSON alert file, strips it down to an `AlertPayload`, and injects it into the initial `AgentState`. 
+2. **API (`api.py`)**: A FastAPI application providing a `POST /investigate` endpoint. It accepts the `AlertPayload` as a JSON body.
+
+Both interfaces use `graph.stream(..., stream_mode="messages")`. This streams the LLM's "Chain of Thought" back to the user token-by-token in real-time. 
+
+In the API, this streaming is exposed as **Server-Sent Events (SSE)**. The endpoint yields events for `thinking` (raw tokens), `tool_call` (tool name and parsed args), `tool_result` (JSON data from the database), and the final `verdict`. The CLI instead prints these to `stdout`.
 
 Instead of waiting 15-20 seconds for the entire graph to execute and print the results in one large batch, the runner uses `graph.stream(..., stream_mode="messages")`. This streams the LLM's "Chain of Thought" back to the user token-by-token in real-time. It also uses a robust chunk accumulator to construct and display tool calls the moment the LLM decides to use them.
 
