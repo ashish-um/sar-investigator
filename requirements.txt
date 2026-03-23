@@ -1,6 +1,7 @@
 langchain
 langchain-groq
 langchain-google-genai
+langchain-openai
 langgraph
 python-dotenv
 pydantic

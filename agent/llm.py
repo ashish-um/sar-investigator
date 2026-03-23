@@ -1,10 +1,10 @@
 """
 LLM factory for the AML Investigation Agent.
 
-Reads LLM_PROVIDER from .env ("groq" or "gemini"), validates the
+Reads LLM_PROVIDER from .env ("groq", "gemini", or "deepseek"), validates the
 corresponding API key, and returns the appropriate LangChain chat model.
-Both ChatGroq and ChatGoogleGenerativeAI share the BaseChatModel interface,
-so nothing downstream needs to know which provider is active.
+All providers share the BaseChatModel interface, so nothing downstream
+needs to know which provider is active.
 """
 
 import os
@@ -15,6 +15,7 @@ load_dotenv()
 _DEFAULTS = {
     "groq": "llama-3.3-70b-versatile",
     "gemini": "gemini-2.5-flash",
+    "deepseek": "deepseek/deepseek-chat",
 }
 
 
@@ -48,8 +49,21 @@ def get_llm():
             google_api_key=api_key,
         )
 
+    elif provider == "deepseek":
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ValueError("OPENROUTER_API_KEY is not set in .env")
+
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=model,
+            temperature=0,
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+        )
+
     else:
         raise ValueError(
             f"Unknown LLM_PROVIDER: '{provider}'. "
-            f"Supported values: 'groq', 'gemini'"
+            f"Supported values: 'groq', 'gemini', 'deepseek'"
         )
