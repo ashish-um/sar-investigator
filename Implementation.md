@@ -64,7 +64,10 @@ Groq's free tier has aggressive rate limits (429 errors). To handle this transpa
 The system has two entry points that both orchestrate the same underlying graph:
 
 1. **CLI (`run_investigation.py`)**: Takes a JSON alert file, strips it down to an `AlertPayload`, and injects it into the initial `AgentState`. 
-2. **API (`api.py`)**: A FastAPI application providing a `POST /investigate` endpoint. It accepts the `AlertPayload` as a JSON body.
+2. **API (`api.py`)**: A FastAPI application providing the following endpoints:
+   - `POST /investigate`: Accepts the `AlertPayload` as a JSON body and streams the investigation.
+   - `GET /api/alerts`: Scans the `tests/sample_alerts/` directory and returns all available True Positive and False Positive alert JSON payloads.
+   - `GET /`: Serves a static `index.html` frontend UI allowing users to dynamically select alerts from a dropdown menu and stream the LLM's investigation in real time.
 
 Both interfaces use `graph.stream(..., stream_mode="messages")`. This streams the LLM's "Chain of Thought" back to the user token-by-token in real-time. 
 
