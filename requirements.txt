@@ -8,3 +8,4 @@ pydantic
 pytest
 fastapi
 uvicorn
+jinja2

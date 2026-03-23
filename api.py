@@ -8,11 +8,12 @@ Run with:  uvicorn api:app --reload
 """
 
 import json
+import os
 import re
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessageChunk
 
 from schemas.alert import AlertPayload
@@ -33,6 +34,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Jinja2 templates for serving the frontend
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(_BASE_DIR, "templates"))
 
 
 def _extract_text(content) -> str:
@@ -195,7 +200,6 @@ async def health():
 @app.get("/api/alerts")
 async def get_alerts():
     """Return a list of available sample alerts from tests/sample_alerts."""
-    import os
     import glob
     alerts = {"fp": [], "tp": []}
     base_dir = os.path.join(os.path.dirname(__file__), "tests", "sample_alerts")
@@ -218,10 +222,6 @@ async def get_alerts():
 
 
 @app.get("/")
-async def root():
+async def root(request: Request):
     """Serve the frontend HTML test client."""
-    import os
-    index_path = os.path.join(os.path.dirname(__file__), "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {"message": "API is running. index.html not found."}
+    return templates.TemplateResponse(request, "index.html")
