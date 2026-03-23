@@ -19,6 +19,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessageChunk
 from schemas.alert import AlertPayload
 from agent.prompts import SYSTEM_PROMPT
 from agent.graph import graph
+from agent.llm import get_llm_config
 
 app = FastAPI(
     title="AML SAR Investigator API",
@@ -224,4 +225,4 @@ async def get_alerts():
 @app.get("/")
 async def root(request: Request):
     """Serve the frontend HTML test client."""
-    return templates.TemplateResponse(request, "index.html")
+    return templates.TemplateResponse(request, "index.html", {"llm_config": get_llm_config()})

@@ -76,11 +76,18 @@ def get_groq_key_count() -> int:
 
 # ── Public Factory ────────────────────────────────────────────────────────
 
+def get_llm_config() -> dict:
+    """Return the active LLM provider and model configuration."""
+    provider = os.getenv("LLM_PROVIDER", "groq").lower().strip()
+    model = os.getenv("LLM_MODEL", "").strip() or _DEFAULTS.get(provider)
+    return {"provider": provider, "model": model}
+
 def get_llm():
     """Return a LangChain chat model based on LLM_PROVIDER in .env."""
 
-    provider = os.getenv("LLM_PROVIDER", "groq").lower().strip()
-    model = os.getenv("LLM_MODEL", "").strip() or _DEFAULTS.get(provider)
+    config = get_llm_config()
+    provider = config["provider"]
+    model = config["model"]
 
     if provider == "groq":
         from langchain_groq import ChatGroq

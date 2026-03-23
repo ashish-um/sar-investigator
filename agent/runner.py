@@ -12,6 +12,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessageChunk
 from schemas.alert import AlertPayload
 from agent.prompts import SYSTEM_PROMPT
 from agent.graph import graph
+from agent.llm import get_llm_config
 
 
 def _extract_text(content) -> str:
@@ -61,6 +62,9 @@ def run_investigation(alert: AlertPayload) -> str:
     print("STARTING AML INVESTIGATION")
     print(f"Alert ID:    {alert.alert_id}")
     print(f"Customer ID: {alert.customer_id}")
+    config = get_llm_config()
+    print(f"LLM Provider: {config['provider'].upper()}")
+    print(f"LLM Model:    {config['model']}")
     print("=" * 80)
 
     print("\n" + "=" * 80)
