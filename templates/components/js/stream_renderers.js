@@ -307,6 +307,34 @@ function playVerdict(data, fullLog) {
     scrollToBottom();
 }
 
+function playRateLimit(data) {
+    finalizeThinkingBlock();
+
+    const div = document.createElement('div');
+
+    if (data.type === 'key_rotated') {
+        div.className = 'rounded-md p-4 animate-fade-in max-w-full bg-amber-50 border border-amber-200 border-l-4 border-l-amber-500 text-amber-800 text-sm mt-2 mb-2 flex items-center gap-3';
+        div.innerHTML = `
+            <svg class="w-5 h-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <div>
+                <span class="font-semibold">Rate Limit Hit</span> — API Key ${data.exhausted_key}/${data.total_keys} exhausted
+                <span class="mx-1">→</span>
+                <span class="font-semibold text-emerald-700">Switching to Key ${data.new_key}/${data.total_keys}</span>
+                <span class="text-amber-600 ml-2 text-xs">(${data.remaining_keys} key${data.remaining_keys !== 1 ? 's' : ''} remaining)</span>
+            </div>`;
+    } else if (data.type === 'all_keys_exhausted') {
+        div.className = 'rounded-md p-4 animate-fade-in max-w-full bg-red-50 border border-red-200 border-l-4 border-l-red-500 text-red-700 text-sm mt-2 mb-2 flex items-center gap-3';
+        div.innerHTML = `
+            <svg class="w-5 h-5 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+            <div>
+                <span class="font-semibold">All ${data.total_keys} API Keys Exhausted</span> — all keys have hit their rate limits. Please wait or add more keys.
+            </div>`;
+    }
+
+    outputContainer.appendChild(div);
+    scrollToBottom();
+}
+
 function playError(data) {
     finalizeThinkingBlock();
     

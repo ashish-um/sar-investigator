@@ -42,6 +42,13 @@ investigateBtn.addEventListener('click', () => {
             const resStr = typeof data.result === 'object' ? JSON.stringify(data.result, null, 2) : data.result;
             fullOutputLog += `[TOOL RESULT]\n${resStr}\n\n`;
             playToolResult(data);
+        } else if (eventType === 'rate_limit') {
+            if (data.type === 'key_rotated') {
+                fullOutputLog += `\n[RATE LIMIT] Key ${data.exhausted_key}/${data.total_keys} exhausted → switching to key ${data.new_key}/${data.total_keys} (${data.remaining_keys} remaining)\n\n`;
+            } else if (data.type === 'all_keys_exhausted') {
+                fullOutputLog += `\n[RATE LIMIT] All ${data.total_keys} API keys exhausted. Investigation cannot continue.\n\n`;
+            }
+            playRateLimit(data);
         } else if (eventType === 'verdict') {
             fullOutputLog += `\n==============================================\n[FINAL VERDICT]\n${JSON.stringify(data, null, 2)}\n`;
             playVerdict(data, fullOutputLog);

@@ -16,6 +16,21 @@ from tools import tools
 
 load_dotenv()
 
+# ── Rate-limit event queue (consumed by api.py SSE stream) ────────────
+_rate_limit_events: list[dict] = []
+
+def drain_rate_limit_events() -> list[dict]:
+    """Return and clear all pending rate-limit events."""
+    global _rate_limit_events
+    events = _rate_limit_events.copy()
+    _rate_limit_events = []
+    return events
+
+def clear_rate_limit_events():
+    """Clear the rate-limit event queue (call at investigation start)."""
+    global _rate_limit_events
+    _rate_limit_events = []
+
 
 def should_continue(state: AgentState) -> str:
     """Route based on whether the last message has tool calls."""
@@ -46,6 +61,7 @@ def agent_node(state: AgentState) -> dict:
         
     import groq
     from agent.llm import rotate_groq_key, get_groq_key_count
+    import agent.llm as _llm_module
     import logging
     logger = logging.getLogger(__name__)
     
@@ -58,14 +74,27 @@ def agent_node(state: AgentState) -> dict:
             return {"messages": [response]}
         except groq.RateLimitError as e:
             last_error = e
+            old_index = _llm_module._current_groq_index + 1
             if attempt < attempts - 1:
                 logger.warning("Rate limit hit in agent_node. Hopping to next Groq key...")
                 # Rotate the key
                 rotate_groq_key()
+                new_index = _llm_module._current_groq_index + 1
+                _rate_limit_events.append({
+                    "type": "key_rotated",
+                    "exhausted_key": old_index,
+                    "new_key": new_index,
+                    "total_keys": attempts,
+                    "remaining_keys": attempts - attempt - 1,
+                })
                 # Rebuild the LLM cache with the new key
                 llm = get_llm()
                 _llm_with_tools = llm.bind_tools(tools)
             else:
+                _rate_limit_events.append({
+                    "type": "all_keys_exhausted",
+                    "total_keys": attempts,
+                })
                 logger.error("All Groq API keys exhausted (rate limited).")
                 
     raise last_error  # type: ignore

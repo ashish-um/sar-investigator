@@ -18,8 +18,11 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessageChunk
 
 from schemas.alert import AlertPayload
 from agent.prompts import SYSTEM_PROMPT
-from agent.graph import graph
+from agent.graph import graph, drain_rate_limit_events, clear_rate_limit_events
 from agent.llm import get_llm_config
+
+import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 app = FastAPI(
     title="AML SAR Investigator API",
@@ -90,6 +93,9 @@ def _stream_investigation(alert: AlertPayload):
     tool_message_index = 0
     tool_call_buffer = {}
 
+    # Clear any stale rate-limit events from previous runs
+    clear_rate_limit_events()
+
     try:
         for chunk, metadata in graph.stream(
             initial_state,
@@ -153,6 +159,10 @@ def _stream_investigation(alert: AlertPayload):
                         "result": result_data,
                         "step": tool_message_index_current,
                     })
+
+            # ── Emit any pending rate-limit events ────────────────
+            for rl_event in drain_rate_limit_events():
+                yield _sse_event("rate_limit", rl_event)
 
         # ── Extract and emit final verdict ────────────────────────
         try:
