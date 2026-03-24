@@ -57,8 +57,9 @@ Groq's free tier has aggressive rate limits (429 errors). To handle this transpa
 3. Overrides `_generate()` and `_stream()` to catch `groq.RateLimitError`.
 4. On a 429, it rotates to the next key, rebuilds the internal HTTP client, and retries.
 5. Each key is tried once. If all keys are exhausted, the error is raised.
+6. The graph appends `key_rotated` and `all_keys_exhausted` events to a shared queue, which `api.py` drains and casts as `rate_limit` SSE events so the frontend can display amber/red warning banners in real-time.
 
-**Decision Reason:** The retry is implemented as a `ChatGroq` subclass rather than external retry middleware so that key rotation happens *inside* the model — the graph, runner, and tools are completely unaware of it. This also means the retry catches errors mid-stream (during `_stream()`), not just on the initial request.
+**Decision Reason:** The retry is implemented as a `ChatGroq` subclass rather than external retry middleware so that key rotation happens *inside* the model — the graph, runner, and tools are completely unaware of it. This also means the retry catches errors mid-stream (during `_stream()`), not just on the initial request. Surfacing these rotations via SSE events provides critical visibility to users without pausing the execution pipeline.
 
 ### The Interfaces (`agent/runner.py`, `run_investigation.py`, and `api.py`)
 The system has two entry points that both orchestrate the same underlying graph:
@@ -109,6 +110,10 @@ The LLM cannot query the database directly. Instead, we provide it with four spe
 ### Tool 4: `get_prior_alert_history`
 - **What it does:** Retrieves previous alerts and their dispositions (e.g., whether a human analyst previously marked similar activity as a false positive because the money was just an inheritance).
 - **Why we built it:** Context is paramount. If a human already cleared this exact activity for this customer three months ago, an automated agent shouldn't flag it again. It also prevents the agent from filing duplicate SARs for the same activity window, which is legally prohibited by the NCA.
+
+### Tool 5: `screen_watchlist`
+- **What it does:** Scans customer and counterparty names against an internal watchlist database using a three-tier matching system (EXACT, ALIAS via pipe-delimited strings, and FUZZY using Jaccard token overlap). 
+- **Why we built it:** To enforce RULE-07 (Sanctions/PEP proximity). It returns heavily structured compliance flags (e.g., `is_absolute_prohibition`), allowing the agent to definitively recommend CTFI disclosures when interacting with sanctioned entities.
 
 **Key Design Decision: Parameter Hallucination Prevention**
 Every tool's docstring explicitly states: `"Only the parameters listed below are accepted. Do not pass any additional parameters."` We added this because LLMs have a habit of "hallucinating" parameters that don't exist in the function signature if they think it will help (like trying to pass a date filter to the customer profile tool). This strict instruction prevents runtime crashes.
@@ -163,7 +168,7 @@ The `key_evidence` entries in the final verdict are not simple one-liners. Each 
 |---|---|
 | `rule_mapped` | Which AML rule this evidence supports (e.g., `RULE-01`) |
 | `finding` | One sentence with specific amounts, counts, dates, and counterparty names |
-| `supporting_data` | Structured object with `amounts`, `dates`, `counterparties`, `accounts_involved`, and `transaction_ids` — always as arrays |
+| `supporting_data` | Structured object with `amounts`, `dates`, `counterparties`, `accounts_involved`, `transaction_ids`, `watchlist_ids`, and `watchlist_hits` — always strictly formatted arrays |
 | `regulatory_significance` | Why this pattern is suspicious under the cited regulation |
 | `source_table` | Which database table this evidence was drawn from |
 | `statistical_context` | A mandatory calculated metric comparing the finding to the customer's baseline profile |
@@ -177,12 +182,13 @@ The prompt includes strict guardrails for evidence quality:
 1. **Rule-Evidence Completeness**: Every rule in `rules_triggered` must have a corresponding `key_evidence` entry. Three rules = three entries.
 2. **Unique Transaction IDs**: Transaction IDs must never be reused across evidence entries. Each ID belongs to exactly one transaction.
 3. **Array-Only Fields**: `supporting_data` fields must always be arrays, even for single values. No singular field names like `amount` or `date`.
-4. **Source Segregation**: RULE-07 (PEP) evidence must only contain customer profile fields (`pep_flag`, `risk_rating`, `kyc_status`), not transaction data. Transaction evidence belongs in RULE-01 or RULE-03 entries.
+4. **Source Segregation**: RULE-07 (PEP/Sanctions) evidence must only contain `watchlist_hits` arrays and customer profile fields (`pep_flag`, `risk_rating`, `kyc_status`). All transaction data (amounts, dates, IDs) is strictly banished to RULE-03 or RULE-01.
 5. **Mandatory Statistical Context**: Each rule type requires specific calculated figures:
    - **RULE-01**: Total structured amount as a percentage of declared annual income
    - **RULE-02**: Retention ratio and credit-to-debit time gap
    - **RULE-03**: Outflow as a percentage of total credits, plus retention ratio
    - **RULE-04/07**: Income multiple of flagged amount vs. declared income
+6. **Critical Violations Language**: The prompt employs highly aggressive "CRITICAL VIOLATION" terminology to enforce schema compliance, particularly preventing the LLM from merging `watchlist_hits` properties into standard transaction evidence arrays.
 
 ### FORMAT B Enforcement
 

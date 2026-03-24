@@ -5,6 +5,15 @@ Pydantic schema for the investigation verdict output.
 from typing import List, Optional
 from pydantic import BaseModel
 
+class WatchlistHit(BaseModel):
+    watchlist_id: str
+    entity_name: str
+    match_type: str
+    watchlist_type: str
+    source: str
+    risk_score: int
+    is_absolute_prohibition: bool
+
 class SupportingData(BaseModel):
     amounts: Optional[List[str]] = None
     dates: Optional[List[str]] = None
@@ -12,6 +21,7 @@ class SupportingData(BaseModel):
     accounts_involved: Optional[List[str]] = None
     transaction_ids: Optional[List[str]] = None
     watchlist_ids: Optional[List[str]] = None
+    watchlist_hits: Optional[List[WatchlistHit]] = None
 
 class KeyEvidenceItem(BaseModel):
     rule_mapped: str

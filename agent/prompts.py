@@ -23,7 +23,7 @@ The recommended tool calling sequence is:
 - Then `get_transaction_history` for each active account over the alert observation window
 - Then `get_prior_alert_history` to check for duplicates and prior context
 - Then `screen_watchlist` for each distinct counterparty name found in the transaction history. Also call it when:
-  (a) the customer profile shows `pep_flag=True` or `sanctions_flag=True` — to confirm the specific watchlist entry
+  (a) If the customer profile shows `pep_flag=True` or `sanctions_flag=True`, you MUST call `screen_watchlist` with the customer's full name before proceeding. This is required to identify the specific watchlist entry and populate `watchlist_hits` in the RULE-07 evidence.
   (b) any alias or related entity name appears in payment references
 - Use the computed_flags in each tool response — they are pre-interpreted signals, not raw data
 
@@ -138,11 +138,7 @@ supporting_data must be populated from actual tool output values.
 Do not write "N/A" or leave arrays empty — if a field is not applicable 
 for a particular rule, omit that key entirely.
 
-For RULE-07, supporting_data must only contain fields from the 
-customer profile — pep_flag, risk_rating, kyc_status, and the 
-analyst notes from any prior alert that confirmed PEP status. 
-Do not include transaction IDs or amounts in a RULE-07 evidence 
-entry — those belong in the RULE-01 or RULE-03 entries.
+
 
 statistical_context must contain at least one calculated figure.
 For RULE-01: state the exact total structured amount and its percentage 
@@ -160,15 +156,49 @@ For RULE-07: state the income multiple across the full flagged amount.
 Example: "Total flagged amount of £387,500 represents 807% of declared 
 annual income of £48,000."
 
-Watchlist evidence rules:
-- When evidence comes from `screen_watchlist`, set `source_table` to 
-  `watchlists`, not `transactions`.
-- `supporting_data` for a watchlist match MUST include `watchlist_ids` 
-  (list of matched IDs), plus `match_type`, `risk_score`, and 
-  `is_absolute_prohibition` in the `finding` text.
-- `statistical_context` for a watchlist hit should state the risk score 
-  and designation source. Example: "Risk score 100 (HM_TREASURY). 
-  Absolute prohibition — CTFI mandatory."
+## WATCHLIST EVIDENCE RULES — CRITICAL VIOLATIONS APPLY
+
+RULE-07 EVIDENCE ENTRY — MANDATORY STRUCTURE:
+source_table MUST be "watchlists". Setting source_table to "transactions" 
+in a RULE-07 entry is a CRITICAL VIOLATION.
+
+supporting_data in a RULE-07 entry MUST contain ONLY these fields:
+  - watchlist_ids (array of matched watchlist_id strings)
+  - watchlist_hits (array of objects — see format below)
+  - pep_flag (from customer profile)
+  - risk_rating (from customer profile)
+  - kyc_status (from customer profile)
+
+Including transaction_ids, amounts, dates, or counterparties in a RULE-07 
+supporting_data is a CRITICAL VIOLATION. Those fields belong exclusively 
+in the RULE-03 or RULE-01 entry.
+
+watchlist_hits array format — each object must contain exactly these fields 
+taken directly from the screen_watchlist tool output:
+  {
+    "watchlist_id": "WL-XXXXX",
+    "entity_name": "...",
+    "match_type": "EXACT or ALIAS or FUZZY",
+    "watchlist_type": "SANCTIONS or PEP or ...",
+    "source": "HM_TREASURY or EU_CONSOLIDATED or ...",
+    "risk_score": 90,
+    "is_absolute_prohibition": true or false
+  }
+
+Outputting a verdict where screen_watchlist found matches but watchlist_hits 
+is absent or empty is a CRITICAL VIOLATION.
+
+RULE-03 EVIDENCE ENTRY when a watchlist-matched counterparty is involved:
+Include ALL transactions with that counterparty (both inbound and outbound 
+directions) in transaction_ids and amounts arrays. The outbound transaction 
+to a sanctioned beneficiary is the most critical transaction — it must never 
+be omitted. Do NOT include watchlist_ids or watchlist_hits in a RULE-03 entry.
+
+statistical_context for RULE-07 watchlist evidence must state the risk score,
+designation source, and income multiple. Example: "WL-00015 (HM_TREASURY, 
+risk score 83). Outbound £95,850.69 represents 155% of declared annual 
+income of £62,000. WL-00013 (EU_CONSOLIDATED, risk score 90) — customer 
+sanctions_flag confirmed active."
 
 ```json
 {
@@ -199,6 +229,39 @@ Watchlist evidence rules:
       "regulatory_significance": "Why this specific pattern is suspicious under the cited rule — reference the regulatory basis",
       "source_table": "transactions",
       "statistical_context": "How this compares to the customer's normal behaviour or declared profile — e.g. income multiple, deviation from baseline"
+    },
+    {
+      "rule_mapped": "RULE-07",
+      "finding": "Customer sanctions_flag confirmed active (WL-00013, Anatoly Breskvin, EU_CONSOLIDATED). Outbound SWIFT beneficiary Horizon Gateway Ltd is an exact match on HM Treasury sanctions list (WL-00015, risk score 83, listed 2023-09-01).",
+      "supporting_data": {
+        "watchlist_ids": ["WL-00013", "WL-00015"],
+        "watchlist_hits": [
+          {
+            "watchlist_id": "WL-00013",
+            "entity_name": "Anatoly Breskvin",
+            "match_type": "PROXIMITY",
+            "watchlist_type": "SANCTIONS",
+            "source": "EU_CONSOLIDATED",
+            "risk_score": 90,
+            "is_absolute_prohibition": false
+          },
+          {
+            "watchlist_id": "WL-00015",
+            "entity_name": "Horizon Gateway Ltd",
+            "match_type": "EXACT",
+            "watchlist_type": "SANCTIONS",
+            "source": "HM_TREASURY",
+            "risk_score": 83,
+            "is_absolute_prohibition": false
+          }
+        ],
+        "pep_flag": false,
+        "risk_rating": "HIGH",
+        "kyc_status": "ENHANCED_DUE_DILIGENCE"
+      },
+      "regulatory_significance": "MLR 2017 Reg. 35 and HM Treasury Consolidated List. Customer is a close associate of EU-sanctioned individual. Outbound beneficiary independently sanctioned by HM Treasury.",
+      "source_table": "watchlists",
+      "statistical_context": "WL-00013 EU_CONSOLIDATED risk score 90. WL-00015 HM_TREASURY risk score 83. Total flagged amount £200,035 represents 323% of declared annual income of £62,000."
     }
   ]
 }
