@@ -76,7 +76,7 @@ function playToolResult(data) {
     contentDiv.className = 'p-4 border-t border-slate-200 bg-slate-50 font-mono text-xs overflow-x-auto text-slate-600';
     
     const result = document.createElement('pre');
-    result.className = 'm-0';
+    result.className = 'm-0 whitespace-pre-wrap break-all';
     result.textContent = typeof data.result === 'object' 
         ? JSON.stringify(data.result, null, 2) 
         : data.result;
@@ -98,187 +98,343 @@ function playToolResult(data) {
     scrollToBottom();
 }
 
+const RULE_LABELS = {
+    "RULE-01": "Structuring / Smurfing",
+    "RULE-02": "Rapid Movement of Funds",
+    "RULE-03": "High-risk jurisdiction transfer",
+    "RULE-04": "Transaction-Profile Mismatch",
+    "RULE-05": "Dormant Account Reactivation",
+    "RULE-06": "Third-Party Funding",
+    "RULE-07": "PEP / Sanctions proximity",
+    "RULE-08": "Round Tripping / Layering"
+};
+
+async function fetchAndRenderInlineTable(tableName, id, containerDiv, btn) {
+    // Toggle logic: if already loaded and visible, just hide it
+    if (containerDiv.dataset.loadedId === id) {
+        const isHidden = containerDiv.classList.contains('hidden');
+        if (isHidden) {
+            containerDiv.classList.remove('hidden');
+            btn.classList.add('ring-2', 'ring-offset-1');
+        } else {
+            containerDiv.classList.add('hidden');
+            btn.classList.remove('ring-2', 'ring-offset-1');
+        }
+        return;
+    }
+
+    // Reset peers
+    const siblingBtns = btn.parentElement.querySelectorAll('button');
+    siblingBtns.forEach(b => b.classList.remove('ring-2', 'ring-offset-1'));
+    btn.classList.add('ring-2', 'ring-offset-1');
+
+    containerDiv.classList.remove('hidden');
+    containerDiv.innerHTML = `<div class="text-xs text-slate-500 animate-pulse bg-slate-50 border border-slate-200 rounded p-4">Loading ${tableName}.csv row ${id}...</div>`;
+
+    try {
+        const res = await fetch(`/data/${tableName}/${id}`);
+        const result = await res.json();
+
+        if (result.error) {
+            containerDiv.innerHTML = `<div class="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-4">Error: ${result.error}</div>`;
+            return;
+        }
+
+        const data = result.data;
+        const keys = Object.keys(data);
+        
+        let tableHTML = `<div class="bg-white border border-slate-200 rounded-md overflow-hidden mt-3 shadow-sm w-full">
+            <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 text-xs text-slate-600 font-mono flex items-center gap-2">
+                <span>${tableName}.csv</span>
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                <span class="font-bold text-slate-800">${id}</span>
+            </div>
+            <div class="grid grid-cols-1 w-full">
+                <div class="overflow-x-auto w-full">
+                    <table class="w-full text-left border-collapse whitespace-nowrap min-w-max">
+                        <thead><tr class="text-xs text-slate-500 border-b border-slate-200">`;
+        
+        for (const k of keys) {
+            tableHTML += `<th class="py-2 px-3 font-medium font-mono">${k}</th>`;
+        }
+        tableHTML += `</tr></thead><tbody class="text-xs text-slate-800"><tr class="hover:bg-green-50/50 bg-[#F0FDF4] transition-colors">`;
+        
+        for (const k of keys) {
+            let val = data[k];
+            if (val === null) val = '<span class="text-slate-400 italic">null</span>';
+            else if (Array.isArray(val)) val = val.join(', ');
+            tableHTML += `<td class="py-2 px-3 border-r border-slate-100 last:border-0 font-mono">${val}</td>`;
+        }
+        
+        tableHTML += `</tr></tbody></table></div></div></div>`;
+        
+        containerDiv.innerHTML = tableHTML;
+        containerDiv.dataset.loadedId = id;
+    } catch (err) {
+        containerDiv.innerHTML = `<div class="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-4">Fetch error: ${err.message}</div>`;
+    }
+}
+
 function playVerdict(data, fullLog) {
     finalizeThinkingBlock();
     lastVerdictData = data;
     
-    const isSAR = data.verdict === 'TRUE_POSITIVE';
-    
     const container = document.createElement('div');
-    container.className = `rounded-md p-6 animate-fade-in max-w-full border shadow-sm mt-4 mb-8 ${isSAR ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`;
+    container.className = `animate-fade-in max-w-full mt-6 mb-12`;
     
-    // Verdict header
-    const header = document.createElement('div');
-    header.className = `text-lg font-bold mb-4 flex items-center gap-2 ${isSAR ? 'text-red-700' : 'text-green-700'}`;
-    header.innerHTML = isSAR 
-        ? `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> TRUE POSITIVE - SAR RECOMMENDED` 
-        : `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> FALSE POSITIVE - NO SUSPICIOUS ACTIVITY`;
-    container.appendChild(header);
-
-    // Metadata row: confidence, SAR recommended, duplicate SAR safe
-    const metaRow = document.createElement('div');
-    metaRow.className = 'flex flex-wrap items-center gap-2 mb-4';
-    if (data.customer_id) {
-        const custLabel = document.createElement('span');
-        custLabel.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mr-1';
-        custLabel.textContent = 'Customer';
-        metaRow.appendChild(custLabel);
-        metaRow.appendChild(makeChip(data.customer_id, 'customer', data.customer_id));
-        const sep = document.createElement('span');
-        sep.className = 'w-px h-4 bg-slate-300 mx-1';
-        metaRow.appendChild(sep);
-    }
-    if (data.confidence) {
-        const confColors = { HIGH: 'bg-red-100 text-red-700 border-red-200', MEDIUM: 'bg-amber-100 text-amber-700 border-amber-200', LOW: 'bg-green-100 text-green-700 border-green-200' };
-        const confBadge = document.createElement('span');
-        confBadge.className = `text-[0.65rem] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${confColors[data.confidence] || 'bg-slate-100 text-slate-600 border-slate-200'}`;
-        confBadge.textContent = `${data.confidence} confidence`;
-        metaRow.appendChild(confBadge);
-    }
-    if (data.sar_recommended !== undefined) {
-        const sarBadge = document.createElement('span');
-        sarBadge.className = `text-[0.65rem] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${data.sar_recommended ? 'bg-red-100 text-red-700 border-red-200' : 'bg-green-100 text-green-700 border-green-200'}`;
-        sarBadge.textContent = data.sar_recommended ? 'SAR Recommended' : 'No SAR';
-        metaRow.appendChild(sarBadge);
-    }
-    if (data.duplicate_sar_safe !== undefined) {
-        const dupBadge = document.createElement('span');
-        dupBadge.className = 'text-[0.65rem] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-slate-100 text-slate-600 border-slate-200';
-        dupBadge.textContent = data.duplicate_sar_safe ? 'No duplicate SAR' : 'Duplicate SAR risk';
-        metaRow.appendChild(dupBadge);
-    }
-    container.appendChild(metaRow);
-
-    // Rules triggered
-    if (data.rules_triggered && data.rules_triggered.length > 0) {
-        const rulesRow = document.createElement('div');
-        rulesRow.className = 'flex flex-wrap items-center gap-2 mb-4';
-        const rulesLabel = document.createElement('span');
-        rulesLabel.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider';
-        rulesLabel.textContent = 'Rules Triggered';
-        rulesRow.appendChild(rulesLabel);
-        for (const rule of data.rules_triggered) {
-            const pill = document.createElement('span');
-            pill.className = 'bg-slate-800 text-white text-[0.6rem] font-bold px-2.5 py-1 rounded uppercase tracking-wider';
-            pill.textContent = rule;
-            rulesRow.appendChild(pill);
-        }
-        container.appendChild(rulesRow);
+    // 1. Top Summary Bar (4 metric chips)
+    const isSAR = data.verdict === 'TRUE_POSITIVE';
+    let verdictColor = 'text-amber-700';
+    let verdictBorder = 'border-amber-200';
+    let verdictBg = 'bg-amber-50';
+    if (data.verdict === 'TRUE_POSITIVE') {
+        verdictColor = 'text-red-700'; verdictBorder = 'border-red-200'; verdictBg = 'bg-red-50';
+    } else if (data.verdict === 'FALSE_POSITIVE') {
+        verdictColor = 'text-green-700'; verdictBorder = 'border-green-200'; verdictBg = 'bg-green-50';
     }
 
-    // Investigation summary
+    const confColor = data.confidence === 'HIGH' ? 'text-amber-700' : 'text-slate-700';
+    const sarRecStr = data.sar_recommended ? 'Yes' : 'No';
+    const sarRecColor = data.sar_recommended ? 'text-green-700' : 'text-slate-700';
+    const dupSafeStr = data.duplicate_sar_safe ? 'Yes' : 'No';
+    const dupSafeColor = data.duplicate_sar_safe ? 'text-green-700' : 'text-red-700';
+
+    const metricsHTML = `
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="${verdictBg} border ${verdictBorder} rounded-lg p-4 shadow-sm">
+                <div class="text-[0.65rem] text-slate-500 uppercase tracking-wider mb-1">Verdict</div>
+                <div class="text-xl font-bold ${verdictColor}">${data.verdict || 'UNKNOWN'}</div>
+            </div>
+            <div class="bg-[#FCF8F2] border border-stone-200 rounded-lg p-4 shadow-sm">
+                <div class="text-[0.65rem] text-slate-500 uppercase tracking-wider mb-1">Confidence</div>
+                <div class="text-xl font-bold ${confColor}">${data.confidence || 'UNKNOWN'}</div>
+            </div>
+            <div class="bg-[#FCF8F2] border border-stone-200 rounded-lg p-4 shadow-sm">
+                <div class="text-[0.65rem] text-slate-500 uppercase tracking-wider mb-1">SAR Recommended</div>
+                <div class="text-xl font-bold ${sarRecColor}">${sarRecStr}</div>
+            </div>
+            <div class="bg-[#FCF8F2] border border-stone-200 rounded-lg p-4 shadow-sm">
+                <div class="text-[0.65rem] text-slate-500 uppercase tracking-wider mb-1">Duplicate Safe</div>
+                <div class="text-xl font-bold ${dupSafeColor}">${dupSafeStr}</div>
+            </div>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', metricsHTML);
+
+    // 2. Investigation Summary Block
     if (data.investigation_summary) {
+        const sumDiv = document.createElement('div');
+        sumDiv.className = 'bg-white border border-slate-200 rounded-lg p-5 shadow-sm mb-6';
+        
         const sumLabel = document.createElement('div');
-        sumLabel.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2';
+        sumLabel.className = 'text-[0.65rem] text-slate-500 uppercase tracking-wider mb-3';
         sumLabel.textContent = 'Investigation Summary';
-        container.appendChild(sumLabel);
-        const summaryDiv = document.createElement('div');
-        summaryDiv.className = 'text-sm text-slate-700 mb-4 p-4 bg-white rounded-md border border-slate-200 leading-relaxed';
-        summaryDiv.textContent = data.investigation_summary;
-        container.appendChild(summaryDiv);
+        sumDiv.appendChild(sumLabel);
+
+        const sumText = document.createElement('p');
+        sumText.className = 'text-sm text-slate-800 leading-relaxed mb-4';
+        sumText.textContent = data.investigation_summary;
+        sumDiv.appendChild(sumText);
+
+        if (data.rules_triggered && data.rules_triggered.length > 0) {
+            const ruleChipsRow = document.createElement('div');
+            ruleChipsRow.className = 'flex flex-wrap gap-2';
+            for (const rule of data.rules_triggered) {
+                const btn = document.createElement('button');
+                btn.className = 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 px-3 py-1 rounded-full text-[0.7rem] font-semibold cursor-pointer transition-colors';
+                btn.textContent = `${rule} ${RULE_LABELS[rule] || ''}`;
+                btn.onclick = () => {
+                    const el = document.getElementById(`ev-card-${rule}`);
+                    if (el) {
+                        el.open = true;
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.classList.add('ring-2', 'ring-indigo-400', 'ring-offset-2');
+                        setTimeout(() => el.classList.remove('ring-2', 'ring-indigo-400', 'ring-offset-2'), 1500);
+                    }
+                };
+                ruleChipsRow.appendChild(btn);
+            }
+            sumDiv.appendChild(ruleChipsRow);
+        }
+        container.appendChild(sumDiv);
     }
 
-    // False positive hypotheses considered
+    // 3. Key Evidence Cards
+    if (data.key_evidence && data.key_evidence.length > 0) {
+        const evLabel = document.createElement('div');
+        evLabel.className = 'text-[0.65rem] text-slate-500 uppercase tracking-wider mb-3 ml-1';
+        evLabel.textContent = 'Key Evidence';
+        container.appendChild(evLabel);
+
+        for (const ev of data.key_evidence) {
+            const details = document.createElement('details');
+            details.id = `ev-card-${ev.rule_mapped}`;
+            details.open = true; // start expanded by default based on screenshot design
+            details.className = 'group bg-white border border-slate-200 rounded-lg shadow-sm mb-4 transition-all duration-300 relative';
+
+            const summary = document.createElement('summary');
+            summary.className = 'flex justify-between items-center p-4 cursor-pointer select-none outline-none [&::-webkit-details-marker]:hidden bg-[#FCF8F2] rounded-t-lg group-open:border-b border-slate-200';
+            
+            summary.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span class="bg-indigo-100 text-indigo-800 text-[0.65rem] font-bold px-2 py-0.5 rounded uppercase">${ev.rule_mapped || 'MAPPED RULE'}</span>
+                    <span class="text-sm font-semibold text-slate-800">${RULE_LABELS[ev.rule_mapped] || ''}</span>
+                </div>
+                <svg class="w-4 h-4 text-slate-600 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            `;
+            details.appendChild(summary);
+
+            const bodyDiv = document.createElement('div');
+            bodyDiv.className = 'p-5';
+
+            // Finding paragraph
+            const findingP = document.createElement('p');
+            findingP.className = 'text-sm text-slate-800 leading-relaxed mb-5';
+            findingP.textContent = ev.finding || '';
+            bodyDiv.appendChild(findingP);
+
+            // CSV Chips
+            const sd = ev.supporting_data;
+            if (sd) {
+                // Determine if we show TXNs or Watchlists based on source_table
+                const source = ev.source_table || '';
+                
+                if (source === 'transactions' && sd.transaction_ids && sd.transaction_ids.length > 0) {
+                    const block = document.createElement('div');
+                    block.className = 'mb-5';
+                    block.innerHTML = `<div class="text-[0.65rem] text-slate-500 mb-2">Transaction IDs — click to inspect CSV row</div>`;
+                    
+                    const chipsRow = document.createElement('div');
+                    chipsRow.className = 'flex flex-wrap gap-2';
+                    const inlineDump = document.createElement('div');
+                    inlineDump.className = 'mt-1 mb-2 hidden';
+
+                    for (const tid of sd.transaction_ids) {
+                        const btn = document.createElement('button');
+                        btn.className = 'bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded text-[0.7rem] font-mono hover:bg-blue-100 transition-colors cursor-pointer outline-none ring-blue-400';
+                        btn.textContent = tid;
+                        btn.onclick = () => fetchAndRenderInlineTable('transactions', tid, inlineDump, btn);
+                        chipsRow.appendChild(btn);
+                    }
+                    block.appendChild(chipsRow);
+                    block.appendChild(inlineDump);
+                    bodyDiv.appendChild(block);
+                }
+
+                if (source === 'watchlists') {
+                    // Customer ID Chip
+                    if (data.customer_id) {
+                        const block = document.createElement('div');
+                        block.className = 'mb-4';
+                        block.innerHTML = `<div class="text-[0.65rem] text-slate-500 mb-2">Customer profile — click to inspect CSV row</div>`;
+                        
+                        const chipsRow = document.createElement('div');
+                        chipsRow.className = 'flex flex-wrap gap-2';
+                        const inlineDump = document.createElement('div');
+                        inlineDump.className = 'mt-1 hidden';
+
+                        const btn = document.createElement('button');
+                        btn.className = 'bg-stone-50 text-stone-700 border border-stone-200 px-2.5 py-1 rounded text-[0.7rem] font-mono hover:bg-stone-100 transition-colors cursor-pointer outline-none ring-stone-400';
+                        btn.textContent = data.customer_id;
+                        btn.onclick = () => fetchAndRenderInlineTable('customers', data.customer_id, inlineDump, btn);
+                        chipsRow.appendChild(btn);
+                        
+                        block.appendChild(chipsRow);
+                        block.appendChild(inlineDump);
+                        bodyDiv.appendChild(block);
+                    }
+
+                    // Watchlist ID Chip
+                    if (sd.watchlist_ids && sd.watchlist_ids.length > 0) {
+                        const block = document.createElement('div');
+                        block.className = 'mb-5';
+                        block.innerHTML = `<div class="text-[0.65rem] text-slate-500 mb-2">Watchlist entry — click to inspect CSV row</div>`;
+                        
+                        const chipsRow = document.createElement('div');
+                        chipsRow.className = 'flex flex-wrap gap-2';
+                        const inlineDump = document.createElement('div');
+                        inlineDump.className = 'mt-1 hidden';
+
+                        for (const wid of sd.watchlist_ids) {
+                            const btn = document.createElement('button');
+                            btn.className = 'bg-stone-50 text-stone-700 border border-stone-200 px-2.5 py-1 rounded text-[0.7rem] font-mono hover:bg-stone-100 transition-colors cursor-pointer outline-none ring-stone-400';
+                            btn.textContent = wid;
+                            btn.onclick = () => fetchAndRenderInlineTable('watchlists', wid, inlineDump, btn);
+                            chipsRow.appendChild(btn);
+                        }
+                        block.appendChild(chipsRow);
+                        block.appendChild(inlineDump);
+                        bodyDiv.appendChild(block);
+                    }
+                }
+            }
+
+            // Statistical Context
+            if (ev.statistical_context) {
+                const statBox = document.createElement('div');
+                statBox.className = 'bg-[#FCF8F2] text-slate-700 px-4 py-3 rounded-md text-[0.8rem] mb-4';
+                statBox.textContent = ev.statistical_context;
+                bodyDiv.appendChild(statBox);
+            }
+
+            // Regulatory Significance
+            if (ev.regulatory_significance) {
+                const regText = document.createElement('div');
+                regText.className = 'text-xs text-slate-500';
+                regText.textContent = ev.regulatory_significance;
+                bodyDiv.appendChild(regText);
+            }
+
+            details.appendChild(bodyDiv);
+            container.appendChild(details);
+        }
+    }
+
+    // 4. Hypotheses Considered
     if (data.false_positive_hypotheses_considered && data.false_positive_hypotheses_considered.length > 0) {
-        const fpLabel = document.createElement('div');
-        fpLabel.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2';
-        fpLabel.textContent = `False Positive Hypotheses (${data.false_positive_hypotheses_considered.length})`;
-        container.appendChild(fpLabel);
+        const hLabel = document.createElement('div');
+        hLabel.className = 'text-[0.65rem] text-slate-500 uppercase tracking-wider mb-3 mt-2 ml-1';
+        hLabel.textContent = 'Hypotheses Considered';
+        container.appendChild(hLabel);
+
         for (const hyp of data.false_positive_hypotheses_considered) {
             const hCard = document.createElement('div');
-            hCard.className = 'bg-white rounded-md border border-slate-200 p-3 mb-2 shadow-sm';
-            const hHeader = document.createElement('div');
-            hHeader.className = 'flex items-start gap-2 mb-1';
-            const assessColor = hyp.assessment === 'REJECTED' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-green-100 text-green-700 border-green-200';
-            const assessBadge = document.createElement('span');
-            assessBadge.className = `text-[0.6rem] font-bold px-2 py-0.5 rounded border uppercase tracking-wider shrink-0 mt-0.5 ${assessColor}`;
-            assessBadge.textContent = hyp.assessment || 'N/A';
-            hHeader.appendChild(assessBadge);
-            const hText = document.createElement('span');
-            hText.className = 'text-sm text-slate-700 font-medium';
-            hText.textContent = hyp.hypothesis || '';
-            hHeader.appendChild(hText);
-            hCard.appendChild(hHeader);
+            
+            const isAccepted = hyp.assessment === 'ACCEPTED';
+            const bgClass = 'bg-[#FCF8F2]';
+            const borderCol = isAccepted ? 'border-green-500' : 'border-red-500';
+            const badgeClass = isAccepted ? 'text-green-700 flex-shrink-0' : 'text-red-500 flex-shrink-0';
+            const badgeText = isAccepted ? '✓ ACCEPTED' : '✗ REJECTED';
+
+            hCard.className = `${bgClass} border border-slate-200 border-l-4 ${borderCol} rounded-lg p-4 mb-3`;
+            
+            const headRow = document.createElement('div');
+            headRow.className = 'flex items-baseline gap-2 mb-2';
+            headRow.innerHTML = `
+                <span class="text-[0.65rem] font-bold ${badgeClass} tracking-wider mr-1">${badgeText}</span>
+                <span class="text-[0.85rem] font-semibold text-slate-800">${hyp.hypothesis || ''}</span>
+            `;
+            hCard.appendChild(headRow);
+
             if (hyp.reason) {
-                const hReason = document.createElement('div');
-                hReason.className = 'text-xs text-slate-500 mt-1.5 ml-[calc(0.5rem+2px)] pl-4 border-l-2 border-slate-200';
-                hReason.textContent = hyp.reason;
-                hCard.appendChild(hReason);
+                const rText = document.createElement('div');
+                rText.className = 'text-[0.8rem] text-slate-600 leading-relaxed';
+                rText.textContent = hyp.reason;
+                hCard.appendChild(rText);
             }
+
             container.appendChild(hCard);
         }
     }
 
-    // Render key_evidence cards
-    if (data.key_evidence && data.key_evidence.length > 0) {
-        const evTitle = document.createElement('div');
-        evTitle.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider mb-3';
-        evTitle.textContent = `Key Evidence (${data.key_evidence.length} entries) — Click IDs to verify`;
-        container.appendChild(evTitle);
-
-        for (const ev of data.key_evidence) {
-            const card = document.createElement('div');
-            card.className = 'bg-white rounded-md border border-slate-200 p-4 mb-3 shadow-sm';
-
-            // Rule badge + finding
-            const cardHeader = document.createElement('div');
-            cardHeader.className = 'flex items-start gap-2 mb-2';
-            if (ev.rule_mapped) {
-                const badge = document.createElement('span');
-                badge.className = 'bg-slate-800 text-white text-[0.6rem] font-bold px-2 py-0.5 rounded uppercase tracking-wider shrink-0 mt-0.5';
-                badge.textContent = ev.rule_mapped;
-                cardHeader.appendChild(badge);
-            }
-            const finding = document.createElement('span');
-            finding.className = 'text-sm text-slate-700';
-            finding.textContent = ev.finding || '';
-            cardHeader.appendChild(finding);
-            card.appendChild(cardHeader);
-
-            // Clickable ID chips
-            const sd = ev.supporting_data;
-            if (sd) {
-                const chipRow = document.createElement('div');
-                chipRow.className = 'flex flex-wrap gap-1.5 mt-3';
-
-                if (sd.transaction_ids) {
-                    for (const txnId of sd.transaction_ids) {
-                        chipRow.appendChild(makeChip(txnId, 'transaction', txnId));
-                    }
-                }
-                if (sd.accounts_involved) {
-                    for (const accId of sd.accounts_involved) {
-                        chipRow.appendChild(makeChip(accId, 'account', accId));
-                    }
-                }
-                if (sd.counterparties) {
-                    for (const cp of sd.counterparties) {
-                        chipRow.appendChild(makeChip(cp, 'counterparty', cp));
-                    }
-                }
-                card.appendChild(chipRow);
-            }
-
-            // Regulatory significance
-            if (ev.regulatory_significance) {
-                const regDiv = document.createElement('div');
-                regDiv.className = 'text-xs text-slate-500 mt-3 italic';
-                regDiv.textContent = ev.regulatory_significance;
-                card.appendChild(regDiv);
-            }
-
-            container.appendChild(card);
-        }
-    }
-
-    // Raw JSON fallback (collapsible)
+    // Raw JSON fallback (collapsible) - minimal representation
     const rawDetails = document.createElement('details');
-    rawDetails.className = 'group mt-4';
+    rawDetails.className = 'group mt-8 max-w-lg';
     const rawSummary = document.createElement('summary');
-    rawSummary.className = 'cursor-pointer select-none text-xs text-slate-500 hover:text-slate-700 font-medium';
-    rawSummary.textContent = 'View Raw Verdict JSON';
+    rawSummary.className = 'cursor-pointer select-none text-xs text-slate-400 hover:text-slate-600 font-medium [&::-webkit-details-marker]:hidden flex items-center gap-1';
+    rawSummary.innerHTML = `<span>View Raw JSON Response</span><svg class="w-3 h-3 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>`;
     const rawPre = document.createElement('pre');
-    rawPre.className = 'font-mono text-xs whitespace-pre-wrap bg-white border border-slate-200 p-4 rounded text-slate-700 m-0 mt-2';
+    rawPre.className = 'font-mono text-[0.65rem] whitespace-pre bg-white border border-slate-200 p-3 rounded text-slate-600 mt-2 overflow-x-auto shadow-inner';
     rawPre.textContent = JSON.stringify(data, null, 2);
     rawDetails.appendChild(rawSummary);
     rawDetails.appendChild(rawPre);
