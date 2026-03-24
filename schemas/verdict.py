@@ -11,6 +11,7 @@ class SupportingData(BaseModel):
     counterparties: Optional[List[str]] = None
     accounts_involved: Optional[List[str]] = None
     transaction_ids: Optional[List[str]] = None
+    watchlist_ids: Optional[List[str]] = None
 
 class KeyEvidenceItem(BaseModel):
     rule_mapped: str

@@ -26,6 +26,7 @@ def create_schema():
     cursor.execute("DROP TABLE IF EXISTS aml_alerts_history")
     cursor.execute("DROP TABLE IF EXISTS accounts")
     cursor.execute("DROP TABLE IF EXISTS customers")
+    cursor.execute("DROP TABLE IF EXISTS watchlists")
 
     # Create customers table
     cursor.execute("""
@@ -106,11 +107,33 @@ def create_schema():
         )
     """)
 
+    # Create watchlists table (standalone reference — no foreign keys)
+    cursor.execute("""
+        CREATE TABLE watchlists (
+            watchlist_id              TEXT PRIMARY KEY,
+            entity_name               TEXT NOT NULL,
+            aliases                   TEXT,
+            entity_type               TEXT,
+            watchlist_type            TEXT,
+            source                    TEXT,
+            listed_date               TEXT,
+            country_of_incorporation  TEXT,
+            country_of_operation      TEXT,
+            risk_score                INTEGER,
+            is_absolute_prohibition   INTEGER NOT NULL DEFAULT 0,
+            status                    TEXT,
+            last_reviewed_date        TEXT,
+            review_due_date           TEXT,
+            related_entity_id         TEXT,
+            notes                     TEXT
+        )
+    """)
+
     conn.commit()
     conn.close()
 
     print(f"Schema created successfully at: {DB_PATH}")
-    print("Tables created: customers, accounts, aml_alerts_history, transactions")
+    print("Tables created: customers, accounts, aml_alerts_history, transactions, watchlists")
 
 
 if __name__ == "__main__":

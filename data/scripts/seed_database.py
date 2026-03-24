@@ -28,6 +28,7 @@ BOOLEAN_COLUMNS = {
     "counterparty_is_high_risk_jurisdiction",
     "is_international",
     "sar_filed",
+    "is_absolute_prohibition",
 }
 
 # Columns that should be coerced to float
@@ -36,6 +37,11 @@ NUMERIC_COLUMNS = {
     "average_monthly_balance_gbp",
     "amount_gbp",
     "original_amount",
+}
+
+# Columns that should be coerced to integer
+INTEGER_COLUMNS = {
+    "risk_score",
 }
 
 
@@ -74,12 +80,27 @@ def coerce_string(value: str):
     return v if v != "" else None
 
 
+def coerce_integer(value: str):
+    """Convert numeric string to integer or None."""
+    if value is None:
+        return None
+    v = value.strip()
+    if v == "":
+        return None
+    try:
+        return int(float(v))
+    except ValueError:
+        return None
+
+
 def coerce_row(row: dict) -> dict:
     """Apply type coercion to a single row dict."""
     result = {}
     for key, value in row.items():
         if key in BOOLEAN_COLUMNS:
             result[key] = coerce_boolean(value)
+        elif key in INTEGER_COLUMNS:
+            result[key] = coerce_integer(value)
         elif key in NUMERIC_COLUMNS:
             result[key] = coerce_numeric(value)
         elif key == "rules_triggered":
@@ -136,6 +157,7 @@ def seed_database():
     load_table(conn, "accounts", "accounts.csv")
     load_table(conn, "aml_alerts_history", "aml_alerts_history.csv")
     load_table(conn, "transactions", "transactions.csv")
+    load_table(conn, "watchlists", "watchlists.csv")
 
     conn.close()
     print("Seeding complete.")

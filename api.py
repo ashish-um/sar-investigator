@@ -235,7 +235,27 @@ _TABLE_PRIMARY_KEYS = {
     "accounts": "account_id",
     "customers": "customer_id",
     "aml_alerts_history": "alert_id",
+    "watchlists": "watchlist_id",
 }
+
+
+@app.get("/data/watchlists/{watchlist_id}")
+async def get_watchlist_entry(watchlist_id: str):
+    """Return a single watchlist row with aliases split into a list."""
+    from tools.db import get_connection
+
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "SELECT * FROM watchlists WHERE watchlist_id = ?", (watchlist_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return {"error": f"No watchlist entry found: {watchlist_id}"}
+        data = dict(row)
+        # Split aliases from pipe-separated string to list
+        aliases_raw = data.get("aliases") or ""
+        data["aliases"] = [a.strip() for a in aliases_raw.split("|") if a.strip()] if aliases_raw else []
+        return {"table": "watchlists", "id": watchlist_id, "data": data}
 
 
 @app.get("/data/transactions/counterparty/{name}")

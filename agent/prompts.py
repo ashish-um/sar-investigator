@@ -22,6 +22,9 @@ The recommended tool calling sequence is:
 - Then `get_account_summary` to get account IDs and check for dormancy
 - Then `get_transaction_history` for each active account over the alert observation window
 - Then `get_prior_alert_history` to check for duplicates and prior context
+- Then `screen_watchlist` for each distinct counterparty name found in the transaction history. Also call it when:
+  (a) the customer profile shows `pep_flag=True` or `sanctions_flag=True` — to confirm the specific watchlist entry
+  (b) any alias or related entity name appears in payment references
 - Use the computed_flags in each tool response — they are pre-interpreted signals, not raw data
 
 ## AML RULES
@@ -52,7 +55,7 @@ Trigger: Payments received from a large number of unrelated third parties with n
 
 RULE-07 — PEP / Sanctions Proximity
 Regulatory basis: MLR 2017 Reg. 35; HM Treasury Consolidated List
-Trigger: Customer or counterparty matches or is linked to a PEP or sanctioned entity
+Trigger: Customer or counterparty matches or is linked to a PEP or sanctioned entity. Counterparty screening via `screen_watchlist` is REQUIRED — do not rely solely on the customer's own `pep_flag`/`sanctions_flag`. You must screen each counterparty name from the transaction history against the watchlist. If `screen_watchlist` returns `is_absolute_prohibition: True`, mandatory CTFI disclosure is required on top of standard SAR
 
 RULE-08 — Round Tripping / Layering
 Regulatory basis: FATF Typology; HMRC Structured Guidance
@@ -156,6 +159,16 @@ of declared annual income.
 For RULE-07: state the income multiple across the full flagged amount. 
 Example: "Total flagged amount of £387,500 represents 807% of declared 
 annual income of £48,000."
+
+Watchlist evidence rules:
+- When evidence comes from `screen_watchlist`, set `source_table` to 
+  `watchlists`, not `transactions`.
+- `supporting_data` for a watchlist match MUST include `watchlist_ids` 
+  (list of matched IDs), plus `match_type`, `risk_score`, and 
+  `is_absolute_prohibition` in the `finding` text.
+- `statistical_context` for a watchlist hit should state the risk score 
+  and designation source. Example: "Risk score 100 (HM_TREASURY). 
+  Absolute prohibition — CTFI mandatory."
 
 ```json
 {

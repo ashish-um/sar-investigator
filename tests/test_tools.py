@@ -129,3 +129,58 @@ class TestGetPriorAlertHistory:
         data = json.loads(result)
         assert data["SAMPLE_ALERTS_TOP_3"] == []
         assert data["COMPUTED_FLAGS"]["duplicate_sar_safe"] is True
+
+
+from tools.internal.screen_watchlist import screen_watchlist
+
+
+class TestScreenWatchlist:
+    """Tests for screen_watchlist tool."""
+
+    def test_exact_name_match(self):
+        """Exact match on entity_name: Horizon Gateway Ltd → WL-00015."""
+        result = screen_watchlist.invoke({"name": "Horizon Gateway Ltd"})
+        assert isinstance(result, str)
+        data = json.loads(result)
+        assert data["total_matches"] >= 1
+        match = data["matches"][0]
+        assert match["watchlist_id"] == "WL-00015"
+        assert match["match_type"] == "EXACT"
+        assert match["match_confidence"] == "HIGH"
+        assert match["is_sanctioned"] is True
+        # aliases should be a list, not a pipe-separated string
+        assert isinstance(match["aliases"], list)
+
+    def test_alias_match(self):
+        """Alias match: Gulf Trade Partners LLC → WL-00001 via alias."""
+        result = screen_watchlist.invoke({"name": "Gulf Trade Partners LLC"})
+        data = json.loads(result)
+        assert data["total_matches"] >= 1
+        # Should match WL-00001 (entity_name is "Gulf Trade Partners Ltd")
+        wl_ids = [m["watchlist_id"] for m in data["matches"]]
+        assert "WL-00001" in wl_ids
+        match = next(m for m in data["matches"] if m["watchlist_id"] == "WL-00001")
+        assert match["match_type"] == "ALIAS"
+        assert match["match_confidence"] == "HIGH"
+
+    def test_no_match(self):
+        """No match: Lagosbridge Investments Ltd → empty result."""
+        result = screen_watchlist.invoke({"name": "Lagosbridge Investments Ltd"})
+        data = json.loads(result)
+        assert data["total_matches"] == 0
+        assert data["matches"] == []
+
+    def test_absolute_prohibition(self):
+        """WL-00001 and WL-00008 have is_absolute_prohibition: True."""
+        # WL-00001 — Gulf Trade Partners Ltd
+        result1 = screen_watchlist.invoke({"name": "Gulf Trade Partners Ltd"})
+        data1 = json.loads(result1)
+        match1 = next(m for m in data1["matches"] if m["watchlist_id"] == "WL-00001")
+        assert match1["is_absolute_prohibition"] is True
+
+        # WL-00008 — Eastern Bridge Finance
+        result2 = screen_watchlist.invoke({"name": "Eastern Bridge Finance"})
+        data2 = json.loads(result2)
+        match2 = next(m for m in data2["matches"] if m["watchlist_id"] == "WL-00008")
+        assert match2["is_absolute_prohibition"] is True
+
