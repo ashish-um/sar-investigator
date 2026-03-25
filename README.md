@@ -4,7 +4,7 @@ A LangGraph-based AI agent that investigates suspicious customer activity and de
 
 ## Tech Stack
 
-- **LLM:** Multi-provider — Groq (`llama-3.3-70b-versatile`) or Google Gemini (`gemini-2.5-flash`), switchable via `.env`
+- **LLM:** Multi-provider — Groq (`llama-3.3-70b-versatile`), Google Gemini (`gemini-2.5-flash`), or Cerebras (`qwen-3-235b-a22b-instruct-2507`), switchable via `.env`
 - **Agent Framework:** LangGraph with LangChain
 - **Database:** SQLite (seeded from CSV files)
 - **Validation:** Pydantic schemas
@@ -41,7 +41,7 @@ pip install -r requirements.txt
 
 # 3. Configure environment
 cp .env.example .env
-# Edit .env — set LLM_PROVIDER (groq or gemini) and the corresponding API key
+# Edit .env — set LLM_PROVIDER (groq, gemini, deepseek, or cerebras) and the corresponding API key
 
 # 4. Create database schema
 python data/scripts/create_schema.py
@@ -60,6 +60,16 @@ python run_investigation.py tests/sample_alerts/false_positive.json
 uvicorn api:app --reload
 # Then open http://127.0.0.1:8000 in your browser
 ```
+
+## Environment Variables
+
+| Variable | Description | Allowed Values |
+|----------|-------------|----------------|
+| `LLM_PROVIDER` | Which provider to use | `groq`, `gemini`, `deepseek`, or `cerebras` |
+| `GROQ_API_KEY` | Groq API key | — |
+| `GEMINI_API_KEY` | Gemini API key | — |
+| `OPENROUTER_API_KEY` | OpenRouter (DeepSeek) API key | — |
+| `CEREBRAS_API_KEY` | Cerebras API key (cloud.cerebras.ai) | — |
 
 ## Investigation Tools
 

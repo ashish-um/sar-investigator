@@ -27,6 +27,7 @@ _DEFAULTS = {
     "groq": "llama-3.3-70b-versatile",
     "gemini": "gemini-2.5-flash",
     "deepseek": "deepseek/deepseek-chat",
+    "cerebras": "qwen-3-235b-a22b-instruct-2507",
 }
 
 
@@ -125,8 +126,20 @@ def get_llm():
             base_url="https://openrouter.ai/api/v1",
         )
 
+    elif provider == "cerebras":
+        from langchain_openai import ChatOpenAI
+        api_key = os.environ.get("CEREBRAS_API_KEY")
+        if not api_key:
+            raise ValueError("CEREBRAS_API_KEY not set. Add it to your .env file.")
+        return ChatOpenAI(
+            model=model or "qwen-3-235b-a22b-instruct-2507",
+            base_url="https://api.cerebras.ai/v1",
+            api_key=api_key,
+            temperature=0,
+        )
+
     else:
         raise ValueError(
             f"Unknown LLM_PROVIDER: '{provider}'. "
-            f"Supported values: 'groq', 'gemini', 'deepseek'"
+            f"Supported values: 'groq', 'gemini', 'deepseek', 'cerebras'"
         )
