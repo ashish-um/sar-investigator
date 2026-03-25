@@ -3,15 +3,15 @@ function appendThinking(text) {
     if (!currentThinkingBlock) {
         currentThinkingBlock = document.createElement('div');
         currentThinkingBlock.className = 'p-2 animate-fade-in max-w-full text-slate-700 whitespace-pre-wrap font-sans text-[0.9375rem] leading-relaxed';
-        
+
         // Add blinking cursor
         const cursor = document.createElement('div');
         cursor.className = 'loader inline-block w-1.5 h-1.5 rounded-full bg-slate-400 animate-typing ml-3 opacity-100 transition-opacity duration-300';
-        
+
         outputContainer.appendChild(currentThinkingBlock);
         outputContainer.appendChild(cursor);
     }
-    
+
     // Append exactly as-is but format bold text
     currentThinkingBlock.innerHTML += formatThinking(text);
     scrollToBottom();
@@ -27,18 +27,18 @@ function finalizeThinkingBlock() {
 
 function playToolCall(data) {
     finalizeThinkingBlock();
-    
+
     const div = document.createElement('div');
     div.className = 'rounded-md p-4 animate-fade-in max-w-full bg-white border border-slate-200 border-l-4 border-l-blue-500 shadow-sm font-mono text-sm ml-2 mb-1';
-    
+
     const header = document.createElement('div');
     header.className = 'text-blue-600 font-bold flex items-center gap-2 mb-2 text-xs uppercase tracking-wide';
     header.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg> Calling Tool: ${data.tool}`;
-    
+
     const args = document.createElement('pre');
     args.className = 'bg-slate-50 border border-slate-100 p-3 rounded overflow-x-auto text-slate-600 m-0 text-xs';
     args.textContent = JSON.stringify(data.arguments, null, 2);
-    
+
     div.appendChild(header);
     div.appendChild(args);
     outputContainer.appendChild(div);
@@ -47,53 +47,53 @@ function playToolCall(data) {
 
 function playToolResult(data) {
     finalizeThinkingBlock();
-    
+
     const details = document.createElement('details');
     details.className = 'group rounded-md border border-slate-200 bg-white shadow-sm mb-2 ml-2 transition-all';
-    
+
     const summary = document.createElement('summary');
     // Remove flex from summary, wrap it in a child div instead
     summary.className = 'cursor-pointer select-none outline-none list-none [&::-webkit-details-marker]:hidden';
-    
+
     const summaryContainer = document.createElement('div');
     summaryContainer.className = 'px-4 py-3 font-medium text-slate-700 hover:bg-slate-50 flex items-center justify-between focus:bg-slate-50';
-    
+
     const innerDiv = document.createElement('div');
     innerDiv.className = 'flex items-center gap-2 text-emerald-600 text-[0.9375rem]';
     innerDiv.innerHTML = `
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         <span>Result Received</span>
     `;
-    
+
     const chevron = document.createElement('span');
     chevron.innerHTML = `<svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>`;
-    
+
     summaryContainer.appendChild(innerDiv);
     summaryContainer.appendChild(chevron);
     summary.appendChild(summaryContainer);
-    
+
     const contentDiv = document.createElement('div');
     contentDiv.className = 'p-4 border-t border-slate-200 bg-slate-50 font-mono text-xs overflow-x-auto text-slate-600';
-    
+
     const result = document.createElement('pre');
     result.className = 'm-0 whitespace-pre-wrap break-all';
-    result.textContent = typeof data.result === 'object' 
-        ? JSON.stringify(data.result, null, 2) 
+    result.textContent = typeof data.result === 'object'
+        ? JSON.stringify(data.result, null, 2)
         : data.result;
-    
+
     contentDiv.appendChild(result);
     details.appendChild(summary);
     details.appendChild(contentDiv);
-    
+
     // Auto scroll to bottom when expanding
     details.addEventListener('toggle', (e) => {
-        if(details.open) {
+        if (details.open) {
             setTimeout(() => {
                 details.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }, 50);
         }
     });
-    
+
     outputContainer.appendChild(details);
     scrollToBottom();
 }
@@ -142,7 +142,7 @@ async function fetchAndRenderInlineTable(tableName, id, containerDiv, btn) {
 
         const data = result.data;
         const keys = Object.keys(data);
-        
+
         let tableHTML = `<div class="bg-white border border-slate-200 rounded-md overflow-hidden mt-3 shadow-sm w-full">
             <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 text-xs text-slate-600 font-mono flex items-center gap-2">
                 <span>${tableName}.csv</span>
@@ -153,21 +153,21 @@ async function fetchAndRenderInlineTable(tableName, id, containerDiv, btn) {
                 <div class="overflow-x-auto w-full">
                     <table class="w-full text-left border-collapse whitespace-nowrap min-w-max">
                         <thead><tr class="text-xs text-slate-500 border-b border-slate-200">`;
-        
+
         for (const k of keys) {
             tableHTML += `<th class="py-2 px-3 font-medium font-mono">${k}</th>`;
         }
         tableHTML += `</tr></thead><tbody class="text-xs text-slate-800"><tr class="hover:bg-green-50/50 bg-[#F0FDF4] transition-colors">`;
-        
+
         for (const k of keys) {
             let val = data[k];
             if (val === null) val = '<span class="text-slate-400 italic">null</span>';
             else if (Array.isArray(val)) val = val.join(', ');
             tableHTML += `<td class="py-2 px-3 border-r border-slate-100 last:border-0 font-mono">${val}</td>`;
         }
-        
+
         tableHTML += `</tr></tbody></table></div></div></div>`;
-        
+
         containerDiv.innerHTML = tableHTML;
         containerDiv.dataset.loadedId = id;
     } catch (err) {
@@ -178,10 +178,10 @@ async function fetchAndRenderInlineTable(tableName, id, containerDiv, btn) {
 function playVerdict(data, fullLog) {
     finalizeThinkingBlock();
     lastVerdictData = data;
-    
+
     const container = document.createElement('div');
     container.className = `animate-fade-in max-w-full mt-6 mb-12`;
-    
+
     // 1. Top Summary Bar (4 metric chips)
     const isSAR = data.verdict === 'TRUE_POSITIVE';
     let verdictColor = 'text-amber-700';
@@ -225,7 +225,7 @@ function playVerdict(data, fullLog) {
     if (data.investigation_summary) {
         const sumDiv = document.createElement('div');
         sumDiv.className = 'bg-white border border-slate-200 rounded-lg p-5 shadow-sm mb-6';
-        
+
         const sumLabel = document.createElement('div');
         sumLabel.className = 'text-[0.65rem] text-slate-500 uppercase tracking-wider mb-3';
         sumLabel.textContent = 'Investigation Summary';
@@ -274,7 +274,7 @@ function playVerdict(data, fullLog) {
 
             const summary = document.createElement('summary');
             summary.className = 'flex justify-between items-center p-4 cursor-pointer select-none outline-none [&::-webkit-details-marker]:hidden bg-[#FCF8F2] rounded-t-lg group-open:border-b border-slate-200';
-            
+
             summary.innerHTML = `
                 <div class="flex items-center gap-3">
                     <span class="bg-indigo-100 text-indigo-800 text-[0.65rem] font-bold px-2 py-0.5 rounded uppercase">${ev.rule_mapped || 'MAPPED RULE'}</span>
@@ -298,12 +298,12 @@ function playVerdict(data, fullLog) {
             if (sd) {
                 // Determine if we show TXNs or Watchlists based on source_table
                 const source = ev.source_table || '';
-                
+
                 if (source === 'transactions' && sd.transaction_ids && sd.transaction_ids.length > 0) {
                     const block = document.createElement('div');
                     block.className = 'mb-5';
                     block.innerHTML = `<div class="text-[0.65rem] text-slate-500 mb-2">Transaction IDs — click to inspect CSV row</div>`;
-                    
+
                     const chipsRow = document.createElement('div');
                     chipsRow.className = 'flex flex-wrap gap-2';
                     const inlineDump = document.createElement('div');
@@ -327,7 +327,7 @@ function playVerdict(data, fullLog) {
                         const block = document.createElement('div');
                         block.className = 'mb-4';
                         block.innerHTML = `<div class="text-[0.65rem] text-slate-500 mb-2">Customer profile — click to inspect CSV row</div>`;
-                        
+
                         const chipsRow = document.createElement('div');
                         chipsRow.className = 'flex flex-wrap gap-2';
                         const inlineDump = document.createElement('div');
@@ -338,7 +338,7 @@ function playVerdict(data, fullLog) {
                         btn.textContent = data.customer_id;
                         btn.onclick = () => fetchAndRenderInlineTable('customers', data.customer_id, inlineDump, btn);
                         chipsRow.appendChild(btn);
-                        
+
                         block.appendChild(chipsRow);
                         block.appendChild(inlineDump);
                         bodyDiv.appendChild(block);
@@ -349,7 +349,7 @@ function playVerdict(data, fullLog) {
                         const block = document.createElement('div');
                         block.className = 'mb-5';
                         block.innerHTML = `<div class="text-[0.65rem] text-slate-500 mb-2">Watchlist entry — click to inspect CSV row</div>`;
-                        
+
                         const chipsRow = document.createElement('div');
                         chipsRow.className = 'flex flex-wrap gap-2';
                         const inlineDump = document.createElement('div');
@@ -399,7 +399,7 @@ function playVerdict(data, fullLog) {
 
         for (const hyp of data.false_positive_hypotheses_considered) {
             const hCard = document.createElement('div');
-            
+
             const isAccepted = hyp.assessment === 'ACCEPTED';
             const bgClass = 'bg-[#FCF8F2]';
             const borderCol = isAccepted ? 'border-green-500' : 'border-red-500';
@@ -407,7 +407,7 @@ function playVerdict(data, fullLog) {
             const badgeText = isAccepted ? '✓ ACCEPTED' : '✗ REJECTED';
 
             hCard.className = `${bgClass} border border-slate-200 border-l-4 ${borderCol} rounded-lg p-4 mb-3`;
-            
+
             const headRow = document.createElement('div');
             headRow.className = 'flex items-baseline gap-2 mb-2';
             headRow.innerHTML = `
@@ -429,12 +429,12 @@ function playVerdict(data, fullLog) {
 
     // Raw JSON fallback (collapsible) - minimal representation
     const rawDetails = document.createElement('details');
-    rawDetails.className = 'group mt-8 max-w-full';
+    rawDetails.className = 'group mt-8 w-full max-w-full overflow-hidden';
     const rawSummary = document.createElement('summary');
     rawSummary.className = 'cursor-pointer select-none text-xs text-slate-400 hover:text-slate-600 font-medium [&::-webkit-details-marker]:hidden flex items-center gap-1';
     rawSummary.innerHTML = `<span>View Raw JSON Response</span><svg class="w-3 h-3 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>`;
     const rawPre = document.createElement('pre');
-    rawPre.className = 'font-mono text-[0.65rem] whitespace-pre bg-white border border-slate-200 p-3 rounded text-slate-600 mt-2 overflow-x-auto shadow-inner';
+    rawPre.className = 'font-mono text-[0.65rem] whitespace-pre-wrap break-all bg-white border border-slate-200 p-3 rounded text-slate-600 mt-2 shadow-inner';
     rawPre.textContent = JSON.stringify(data, null, 2);
     rawDetails.appendChild(rawSummary);
     rawDetails.appendChild(rawPre);
@@ -458,7 +458,7 @@ function playVerdict(data, fullLog) {
         }
     };
     if (fullLog) container.appendChild(copyBtn);
-    
+
     outputContainer.appendChild(container);
     scrollToBottom();
 }
@@ -493,7 +493,7 @@ function playRateLimit(data) {
 
 function playError(data) {
     finalizeThinkingBlock();
-    
+
     const div = document.createElement('div');
     div.className = 'rounded-md p-4 animate-fade-in max-w-full bg-red-50 border border-red-200 border-l-4 border-l-red-500 text-red-700 font-mono text-sm mt-4';
     div.textContent = `Error: ${data.message}`;
