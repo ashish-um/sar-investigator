@@ -429,7 +429,7 @@ function playVerdict(data, fullLog) {
 
     // Raw JSON fallback (collapsible) - minimal representation
     const rawDetails = document.createElement('details');
-    rawDetails.className = 'group mt-8 max-w-lg';
+    rawDetails.className = 'group mt-8 max-w-full';
     const rawSummary = document.createElement('summary');
     rawSummary.className = 'cursor-pointer select-none text-xs text-slate-400 hover:text-slate-600 font-medium [&::-webkit-details-marker]:hidden flex items-center gap-1';
     rawSummary.innerHTML = `<span>View Raw JSON Response</span><svg class="w-3 h-3 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>`;

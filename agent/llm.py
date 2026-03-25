@@ -29,7 +29,7 @@ _DEFAULTS = {
     "deepseek": "deepseek/deepseek-chat",
     "cerebras": "qwen-3-235b-a22b-instruct-2507",
     "mistral": "mistral-large-latest",
-    "nvidia": "deepseek-ai/deepseek-r1",
+    "nvidia": "deepseek-ai/deepseek-v3.1",
 }
 
 
