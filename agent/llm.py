@@ -28,6 +28,8 @@ _DEFAULTS = {
     "gemini": "gemini-2.5-flash",
     "deepseek": "deepseek/deepseek-chat",
     "cerebras": "qwen-3-235b-a22b-instruct-2507",
+    "mistral": "mistral-large-latest",
+    "nvidia": "deepseek-ai/deepseek-r1",
 }
 
 
@@ -111,6 +113,29 @@ def get_llm():
             model=model,
             temperature=0,
             google_api_key=api_key,
+        )
+
+    elif provider == "mistral":
+        api_key = os.getenv("MISTRAL_API_KEY")
+        if not api_key:
+            raise ValueError("MISTRAL_API_KEY environment variable is not set.")
+        from langchain_mistralai import ChatMistralAI
+        return ChatMistralAI(
+            model=model,
+            api_key=api_key,
+            temperature=0,
+        )
+
+    elif provider == "nvidia":
+        api_key = os.getenv("NVIDIA_API_KEY")
+        if not api_key:
+            raise ValueError("NVIDIA_API_KEY environment variable is not set.")
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=model,
+            api_key=api_key,
+            base_url="https://integrate.api.nvidia.com/v1",
+            temperature=0,
         )
 
     elif provider == "deepseek":

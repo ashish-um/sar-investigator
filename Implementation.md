@@ -10,7 +10,7 @@ Whether you're a developer joining the team or a stakeholder wanting to understa
 
 Banks generate thousands of automated alerts every day flagging potentially suspicious customer transactions. Most of these are "false positives" (legitimate activity like receiving an inheritance or moving house). However, some are "true positives" (genuine money laundering, structuring, or illicit funding). 
 
-This project uses an AI Agent powered by **LangChain** and **LangGraph** to act as a Level 1 AML Investigator. The LLM provider is configurable at runtime — currently supporting **Groq** (`llama-3.3-70b-versatile`) and **Google Gemini** (`gemini-2.5-flash`) — with no code changes required to switch between them. When given an alert, the agent:
+This project uses an AI Agent powered by **LangChain** and **LangGraph** to act as a Level 1 AML Investigator. The LLM provider is configurable at runtime — currently supporting **Groq** (`llama-3.3-70b-versatile`), **Google Gemini** (`gemini-2.5-flash`), **Mistral AI** (`mistral-large-latest`), and **NVIDIA NIM** (`deepseek-ai/deepseek-r1` or any NIM-hosted model) — with no code changes required to switch between them. When given an alert, the agent:
 1. Forms a hypothesis about what the customer is doing.
 2. Uses a suite of internal database tools to gather financial evidence.
 3. Analyzes the tool results to confirm or refute its hypothesis.
@@ -41,11 +41,15 @@ The agent is **provider-agnostic**. Instead of hardcoding a specific LLM, `agent
 | `LLM_MODEL` | Optional model override | `gemini-2.5-flash` (blank = provider default) |
 | `GROQ_API_KEY` | Groq key(s) — comma-separated for key hopping | `gsk_key1,gsk_key2` |
 | `GEMINI_API_KEY` | Google Gemini API key | — |
+| `MISTRAL_API_KEY` | Mistral AI API key | — |
+| `NVIDIA_API_KEY` | NVIDIA NIM API key | — |
 | `OPENROUTER_API_KEY` | OpenRouter key (for DeepSeek via OpenRouter) | — |
 
 `get_llm()` validates the API key is present, imports the correct LangChain chat model, and returns it. All three providers share the `BaseChatModel` interface, so nothing downstream needs to know which provider is active.
 
 The **DeepSeek** provider uses `ChatOpenAI` from `langchain-openai` with `base_url` pointed at `https://openrouter.ai/api/v1`. OpenRouter exposes an OpenAI-compatible API, so no DeepSeek-specific package is needed.
+
+The **NVIDIA NIM** provider also uses `ChatOpenAI` with `base_url` pointed at `https://integrate.api.nvidia.com/v1`. This gives access to DeepSeek-R1 — a reasoning-optimised model with native CoT and tool-use support — as well as Llama 3.3 70B, Mistral Large, and Qwen3 235B, all on the same free-tier endpoint.
 
 **Decision Reason:** We use lazy imports (importing inside the function) so that `langchain-groq` is not required when using Gemini and vice versa. This keeps the dependency footprint minimal and allows switching providers at runtime by editing `.env` alone.
 

@@ -4,7 +4,7 @@ A LangGraph-based AI agent that investigates suspicious customer activity and de
 
 ## Tech Stack
 
-- **LLM:** Multi-provider — Groq (`llama-3.3-70b-versatile`), Google Gemini (`gemini-2.5-flash`), or Cerebras (`qwen-3-235b-a22b-instruct-2507`), switchable via `.env`
+- **LLM:** Multi-provider — Groq, Google Gemini, Mistral AI, or NVIDIA NIM (`deepseek-ai/deepseek-r1` recommended), switchable via `.env`
 - **Agent Framework:** LangGraph with LangChain
 - **Database:** SQLite (seeded from CSV files)
 - **Validation:** Pydantic schemas
@@ -65,9 +65,11 @@ uvicorn api:app --reload
 
 | Variable | Description | Allowed Values |
 |----------|-------------|----------------|
-| `LLM_PROVIDER` | Which provider to use | `groq`, `gemini`, `deepseek`, or `cerebras` |
+| `LLM_PROVIDER` | Which provider to use | `groq`, `gemini`, `deepseek`, `cerebras`, `mistral`, or `nvidia` |
 | `GROQ_API_KEY` | Groq API key | — |
 | `GEMINI_API_KEY` | Gemini API key | — |
+| `MISTRAL_API_KEY` | Mistral API key | — |
+| `NVIDIA_API_KEY` | NVIDIA NIM API key (build.nvidia.com) | — |
 | `OPENROUTER_API_KEY` | OpenRouter (DeepSeek) API key | — |
 | `CEREBRAS_API_KEY` | Cerebras API key (cloud.cerebras.ai) | — |
 
