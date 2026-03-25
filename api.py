@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessageChunk
 
+from pydantic import BaseModel
 from schemas.alert import AlertPayload
 from agent.prompts import SYSTEM_PROMPT
 from agent.graph import graph, drain_rate_limit_events, clear_rate_limit_events
@@ -193,6 +194,62 @@ async def investigate(alert: AlertPayload):
     """
     return StreamingResponse(
         _stream_investigation(alert),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+class GenerateSARRequest(BaseModel):
+    """Request body for SAR generation — verdict + alert held in frontend state."""
+    verdict: dict
+    alert: dict
+
+
+@app.post("/api/generate-sar")
+async def generate_sar_endpoint(request: GenerateSARRequest):
+    """
+    Build an Evidence Package from the verdict + alert, then stream
+    SAR section generation via Server-Sent Events.
+    """
+    import asyncio
+    from evidence.builder import build_evidence_package
+    from sar.generator import generate_sar_stream
+
+    async def event_stream():
+        try:
+            # Build Evidence Package (sync DB queries — offload to threadpool)
+            yield _sse_event("sar_status", {"message": "Building evidence package..."})
+
+            loop = asyncio.get_event_loop()
+            evidence = await loop.run_in_executor(
+                None,
+                build_evidence_package,
+                request.verdict,
+                request.alert,
+            )
+
+            yield _sse_event("evidence_ready", {
+                "investigation_id": evidence.investigation_id,
+                "glossary_codes": evidence.nca_glossary_codes,
+            })
+
+            # Stream SAR generation section by section
+            async for event_json in generate_sar_stream(evidence):
+                event = json.loads(event_json)
+                event_type = event.pop("type", "sar_status")
+                yield _sse_event(event_type, event)
+
+        except ValueError as e:
+            yield _sse_event("error", {"message": str(e)})
+        except Exception as e:
+            yield _sse_event("error", {"message": f"SAR generation failed: {str(e)}"})
+
+    return StreamingResponse(
+        event_stream(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

@@ -1,0 +1,64 @@
+{
+    "verdict": "TRUE_POSITIVE",
+    "confidence": "HIGH",
+    "sar_recommended": true,
+    "duplicate_sar_safe": true,
+    "investigation_summary": "Customer Adebayo O. Adeyemi (CUST-UK-015201) is a PEP who made five structured cash deposits totalling £48,600 on consecutive days, all below the £10,000 reporting threshold, followed immediately by a £48,000 SWIFT transfer to the UAE, a FATF grey-listed jurisdiction. Transaction volumes are inconsistent with the subject's declared salary income of £48,000.",
+    "rules_triggered": ["RULE-01", "RULE-03", "RULE-07"],
+    "false_positive_hypotheses_considered": [
+        {
+            "hypothesis": "The cash deposits represent accumulated legitimate savings being consolidated",
+            "assessment": "REJECTED",
+            "reason": "Five deposits on consecutive days in amounts just below £10,000 is inconsistent with savings consolidation and is consistent with deliberate structuring to avoid reporting thresholds."
+        },
+        {
+            "hypothesis": "The international transfer is a legitimate business payment",
+            "assessment": "REJECTED",
+            "reason": "Customer is an individual salaried employee with no business accounts. The payment reference 'Consultancy Fees' is inconsistent with their declared occupation as a Business Development Manager."
+        }
+    ],
+    "key_evidence": [
+        {
+            "data_point": "5 CASH_DEPOSIT transactions on consecutive days: £9,800, £9,650, £9,900, £9,750, £9,500 — all below £10,000 threshold, totalling £48,600",
+            "significance": "Classic structuring pattern — amounts deliberately kept below the £10,000 reporting threshold across 5 consecutive in-branch deposits",
+            "rule_mapped": "RULE-01",
+            "source": "transactions",
+            "finding": "5 CASH_DEPOSIT transactions on consecutive days totalling £48,600",
+            "supporting_data": {
+                "amounts": ["£9,800", "£9,650", "£9,900", "£9,750", "£9,500"],
+                "dates": ["2024-11-01", "2024-11-02", "2024-11-03", "2024-11-04", "2024-11-05"]
+            },
+            "regulatory_significance": "Violates POCA 2002 s.327 — structuring to avoid reporting thresholds",
+            "source_table": "transactions",
+            "statistical_context": "£48,600 structured total represents 101.25% of declared annual income of £48,000"
+        },
+        {
+            "data_point": "SWIFT transfer of £48,000 to UAE (FATF grey-listed) on 2024-11-08, 3 days after the cash deposits cleared",
+            "significance": "Rapid outflow to a FATF grey-listed jurisdiction immediately following structured cash receipt — consistent with placement and layering phases",
+            "rule_mapped": "RULE-03",
+            "source": "transactions",
+            "finding": "£48,000 SWIFT transfer to UAE 3 days after structured deposits",
+            "supporting_data": {
+                "amounts": ["£48,000"],
+                "dates": ["2024-11-08"],
+                "counterparties": ["Lagosbridge Investments Ltd"]
+            },
+            "regulatory_significance": "Violates FATF Recommendation 19 — transfer to FATF grey-listed jurisdiction",
+            "source_table": "transactions",
+            "statistical_context": "£48,000 outflow represents 79.2% of total credits of £60,600 in the observation window"
+        },
+        {
+            "data_point": "Customer pep_flag=True — son of State Governor Oluwasegun Adeyemi. kyc_status: ENHANCED_DUE_DILIGENCE, risk_rating: HIGH",
+            "significance": "Any suspicious activity on a PEP account requires mandatory escalation under MLR 2017 Reg. 35 regardless of transaction amounts",
+            "rule_mapped": "RULE-07",
+            "source": "customers",
+            "finding": "Customer is a PEP — son of State Governor",
+            "supporting_data": {
+                "watchlist_ids": ["PEP-NG-001"]
+            },
+            "regulatory_significance": "Mandatory escalation under MLR 2017 Reg. 35 for PEP accounts",
+            "source_table": "watchlists",
+            "statistical_context": "Total flagged amount of £387,500 represents 807% of declared annual income of £48,000"
+        }
+    ]
+}

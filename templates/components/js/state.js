@@ -10,6 +10,7 @@ let currentThinkingBlock = null;
 let loadedAlerts = {};
 let fullOutputLog = "";
 let lastVerdictData = null;
+let lastAlertPayload = null;
 
 const evidenceDrawer = document.getElementById('evidence-drawer');
 const drawerOverlay = document.getElementById('drawer-overlay');

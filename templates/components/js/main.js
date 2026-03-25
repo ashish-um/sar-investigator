@@ -14,6 +14,7 @@ investigateBtn.addEventListener('click', () => {
     fullOutputLog = "=== INVESTIGATION LOG ===\n\n";
     fullOutputLog += "ALERT PAYLOAD:\n" + JSON.stringify(payload, null, 2) + "\n\n";
     fullOutputLog += "AGENT REASONING FLIGHT RECORDER:\n==============================================\n\n";
+    lastAlertPayload = payload;
     
     // UI State
     setStatus('Investigating...', true);
