@@ -202,6 +202,7 @@ sanctions_flag confirmed active."
 
 ```json
 {
+  "customer_id": "The specific customer ID from the alert (e.g., CUST-UK-XXXXX)",
   "verdict": "TRUE_POSITIVE or FALSE_POSITIVE or INCONCLUSIVE",
   "confidence": "HIGH or MEDIUM or LOW",
   "sar_recommended": true or false,
