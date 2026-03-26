@@ -52,6 +52,7 @@
         // 1. Import markdown-it and DOMPurify via bundled ES Modules
         import markdownit from 'https://esm.sh/markdown-it@14?bundle';
         import DOMPurify from 'https://esm.sh/dompurify@3?bundle';
+        import markdownItFootnote from 'https://esm.sh/markdown-it-footnote@4?bundle';
 
         // 2. Initialize the parser with GitHub-like settings
         const md = markdownit({
@@ -60,6 +61,7 @@
             typographer: true, // Enable smartquotes and other typographic replacements
             breaks: true       // Convert '\n' in paragraphs into <br> (GitHub behavior)
         });
+        md.use(markdownItFootnote);
 
         // State Management
         let rawMarkdown = "";
