@@ -90,10 +90,14 @@
         const generateBtn = document.getElementById('generate-sar-btn');
 
         // 3. Update the render function to Parse -> Sanitize -> Inject
-    // 1. Create a single, reusable floating tooltip container using Tailwind classes
+    // 1. Create reusable floating tooltip containers using Tailwind classes
     const tooltip = document.createElement('div');
     tooltip.className = 'absolute z-50 hidden max-w-sm p-4 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg shadow-xl pointer-events-none transition-opacity duration-200 opacity-0';
     document.body.appendChild(tooltip);
+
+    const reasoningTooltip = document.createElement('div');
+    reasoningTooltip.className = 'absolute z-50 hidden w-72 p-3 text-xs text-left font-normal text-purple-900 bg-purple-50 border border-purple-200 rounded-lg shadow-xl pointer-events-none transition-opacity duration-200 opacity-0 transform -translate-x-1/2';
+    document.body.appendChild(reasoningTooltip);
 
     // Global state for Inspector Mode
     let isInspectorMode = true;
@@ -113,8 +117,8 @@
             if (isInspectorMode) {
                 const reasoningRegex = /\[REASONING:\s*(.*?)\]/g;
                 processedMarkdown = processedMarkdown.replace(reasoningRegex, (match, rationale) => {
-                    // FLATTENED STRING & SPANS ONLY: Prevents markdown line-breaks and HTML validation errors
-                    return `<span class="relative group cursor-help inline-flex items-center justify-center ml-1 w-5 h-5 bg-purple-100 rounded-full hover:bg-purple-200 transition-colors"><span class="text-xs text-purple-700">✨</span><span class="absolute hidden group-hover:block z-50 w-72 p-3 text-xs text-left font-normal text-purple-900 bg-purple-50 border border-purple-200 rounded-lg shadow-xl bottom-full mb-2 left-1/2 transform -translate-x-1/2"><strong class="block mb-1 text-purple-700 uppercase tracking-wider text-[10px]">AI Rationale</strong>${rationale}<span class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-purple-200"></span></span></span>`;
+                    const cleanRationale = rationale.replace(/"/g, '&quot;');
+                    return `<span class="reasoning-ref cursor-help inline-flex items-center justify-center ml-1 w-5 h-5 bg-purple-100 rounded-full hover:bg-purple-200 transition-colors" data-rationale="${cleanRationale}"><span class="text-xs text-purple-700">✨</span></span>`;
                 });
             } else {
                 processedMarkdown = processedMarkdown.replace(/\[REASONING:\s*(.*?)\]/g, '');
@@ -123,8 +127,8 @@
             // Parse the processed markdown and sanitize
             const dirtyHtml = md.render(processedMarkdown);
             const cleanHtml = DOMPurify.sanitize(dirtyHtml, {
-                ADD_TAGS: ['span', 'strong'],
-                ADD_ATTR: ['class']
+                ADD_TAGS: ['span', 'strong', 'div'],
+                ADD_ATTR: ['class', 'data-rationale']
             });
             viewPreview.innerHTML = cleanHtml;
             
@@ -162,7 +166,28 @@
                 }
             });
 
-            // C. Update Tabs
+            // C. Attach Hover Logic to all reasoning references
+            const reasoningRefs = viewPreview.querySelectorAll('.reasoning-ref');
+            reasoningRefs.forEach(ref => {
+                ref.addEventListener('mouseenter', (e) => {
+                    const rationale = ref.getAttribute('data-rationale');
+                    reasoningTooltip.innerHTML = `<strong class="block mb-1 text-purple-700 uppercase tracking-wider text-[10px]">AI Rationale</strong>${rationale}<div class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-purple-200"></div>`;
+                    reasoningTooltip.classList.remove('hidden');
+                    
+                    const rect = ref.getBoundingClientRect();
+                    reasoningTooltip.style.left = `${rect.left + window.scrollX + (rect.width / 2)}px`;
+                    reasoningTooltip.style.top = `${rect.top + window.scrollY - reasoningTooltip.offsetHeight - 8}px`;
+                    
+                    setTimeout(() => reasoningTooltip.classList.remove('opacity-0'), 10);
+                });
+
+                ref.addEventListener('mouseleave', () => {
+                    reasoningTooltip.classList.add('opacity-0');
+                    setTimeout(() => reasoningTooltip.classList.add('hidden'), 200);
+                });
+            });
+
+            // D. Update Tabs
             viewPreview.classList.remove('hidden');
             viewCode.classList.add('hidden');
             tabPreview.className = "px-3 py-1.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors";
