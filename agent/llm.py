@@ -138,6 +138,17 @@ def get_llm():
             temperature=0,
         )
 
+    elif provider == "llamacpp":
+        from langchain_openai import ChatOpenAI
+        host = os.getenv("LLAMACPP_HOST", "http://localhost:8080")
+        # llama.cpp doesn't need a real key but LangChain requires a non-empty string
+        return ChatOpenAI(
+            model="local",                        # ignored by llama.cpp, just a label
+            api_key="not-required",
+            base_url=f"{host}/v1",
+            temperature=0,
+        )
+
     elif provider == "deepseek":
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
