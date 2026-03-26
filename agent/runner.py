@@ -10,7 +10,7 @@ import re
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessageChunk
 
 from schemas.alert import AlertPayload
-from agent.prompts import SYSTEM_PROMPT
+from agent.prompts import build_system_prompt
 from agent.graph import graph
 from agent.llm import get_llm_config
 
@@ -48,9 +48,11 @@ def run_investigation(alert: AlertPayload) -> str:
         f"The customer under investigation is: {alert.customer_id}"
     )
 
+    dynamic_prompt = build_system_prompt(alert_dict)
+
     initial_state = {
         "messages": [
-            SystemMessage(content=SYSTEM_PROMPT),
+            SystemMessage(content=dynamic_prompt),
             HumanMessage(content=human_content),
         ],
         "alert": alert_dict,

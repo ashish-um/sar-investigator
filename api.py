@@ -17,7 +17,7 @@ from fastapi.templating import Jinja2Templates
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessageChunk
 
 from schemas.alert import AlertPayload
-from agent.prompts import SYSTEM_PROMPT
+from agent.prompts import build_system_prompt
 from agent.graph import graph, drain_rate_limit_events, clear_rate_limit_events
 from agent.llm import get_llm_config
 
@@ -79,9 +79,11 @@ def _stream_investigation(alert: AlertPayload):
         f"The customer under investigation is: {alert.customer_id}"
     )
 
+    dynamic_prompt = build_system_prompt(alert_dict)
+
     initial_state = {
         "messages": [
-            SystemMessage(content=SYSTEM_PROMPT),
+            SystemMessage(content=dynamic_prompt),
             HumanMessage(content=human_content),
         ],
         "alert": alert_dict,
@@ -99,6 +101,9 @@ def _stream_investigation(alert: AlertPayload):
     clear_rate_limit_events()
 
     try:
+        # Emit the dynamically built system prompt to the frontend so it can be logged
+        yield _sse_event("system_prompt", {"content": dynamic_prompt})
+
         for chunk, metadata in graph.stream(
             initial_state,
             stream_mode="messages"

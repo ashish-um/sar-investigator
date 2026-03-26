@@ -30,7 +30,10 @@ investigateBtn.addEventListener('click', () => {
         body: JSON.stringify(payload)
     }, (eventType, data) => {
         // Event Router
-        if (eventType === 'thinking') {
+        if (eventType === 'system_prompt') {
+            const promptText = data.content || data;
+            fullOutputLog += "DYNAMIC SYSTEM PROMPT:\n" + promptText + "\n\n==============================================\n\n";
+        } else if (eventType === 'thinking') {
             if (data.content) {
                 fullOutputLog += data.content;
                 appendThinking(data.content);
