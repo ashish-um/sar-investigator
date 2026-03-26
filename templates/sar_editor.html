@@ -25,84 +25,133 @@
         <!-- Right Panel (The Record) -->
         <section class="flex-1 bg-slate-100 flex flex-col overflow-y-auto w-full">
             <div class="max-w-3xl w-full bg-white shadow-lg mx-auto mt-8 mb-8 p-12 min-h-[1056px] ring-1 ring-slate-200">
-                <div id="editor-toolbar" class="flex items-center gap-2 border-b border-slate-200 pb-4 mb-4 sticky top-0 bg-white z-10">
-                    <button type="button" id="btn-bold" class="p-2 text-slate-600 hover:bg-slate-100 rounded text-sm font-semibold transition-colors">B</button>
-                    <button type="button" id="btn-italic" class="p-2 text-slate-600 hover:bg-slate-100 rounded text-sm font-semibold italic transition-colors">I</button>
-                    <button type="button" id="btn-h1" class="p-2 text-slate-600 hover:bg-slate-100 rounded text-sm font-semibold transition-colors">H1</button>
-                    <button type="button" id="btn-h2" class="p-2 text-slate-600 hover:bg-slate-100 rounded text-sm font-semibold transition-colors">H2</button>
-                    <button type="button" id="btn-bullet" class="p-2 text-slate-600 hover:bg-slate-100 rounded text-sm font-semibold transition-colors">• List</button>
+                <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-6 sticky top-0 bg-white z-10">
+                    <div class="flex space-x-4">
+                        <button type="button" id="tab-preview" class="px-3 py-1.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors">
+                            Preview Document
+                        </button>
+                        <button type="button" id="tab-code" class="px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent transition-colors">
+                            Edit Raw Markdown
+                        </button>
+                    </div>
+                    <span id="sync-status" class="text-xs text-slate-400 font-mono hidden">Unsaved changes</span>
                 </div>
 
-                <div id="doc-content" class="focus:outline-none min-h-[800px] text-slate-800"></div>
+                <div class="relative min-h-[800px]">
+                    <div id="view-preview" class="prose prose-sm max-w-none prose-slate prose-table:border-collapse prose-td:border prose-td:border-slate-300 prose-td:p-2 prose-th:border prose-th:border-slate-300 prose-th:p-2 prose-th:bg-slate-50 w-full block">
+                        <div class="text-slate-400 italic mt-10">Document content will appear here...</div>
+                    </div>
+
+                    <textarea id="view-code" class="absolute inset-0 w-full h-full min-h-[800px] p-4 font-mono text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none hidden" spellcheck="false" placeholder="Raw markdown will appear here..."></textarea>
+                </div>
             </div>
         </section>
     </main>
-
     <script type="module">
-        // 1. Import pure Vanilla JS TipTap core and starter kit (without ?bundle to allow esm.sh deduplication of ProseMirror)
-        import { Editor } from 'https://esm.sh/@tiptap/core@2';
-        import StarterKit from 'https://esm.sh/@tiptap/starter-kit@2';
+        import { marked } from 'https://esm.sh/marked@12?bundle';
 
-        // 2. Initialize the editor on our div
-        const editor = new Editor({
-            element: document.querySelector('#doc-content'),
-            extensions: [StarterKit],
-            content: '',
-            editorProps: {
-                attributes: {
-                    class: 'prose prose-sm max-w-none focus:outline-none min-h-[800px] whitespace-pre-wrap',
-                },
-            },
+        // State Management
+        let rawMarkdown = "";
+        let isPreviewMode = true;
+
+        // DOM Elements
+        const tabPreview = document.getElementById('tab-preview');
+        const tabCode = document.getElementById('tab-code');
+        const viewPreview = document.getElementById('view-preview');
+        const viewCode = document.getElementById('view-code');
+        const generateBtn = document.getElementById('generate-sar-btn');
+
+        // Function to update the UI based on state
+        function render() {
+            if (isPreviewMode) {
+                viewPreview.innerHTML = marked.parse(rawMarkdown);
+                viewPreview.classList.remove('hidden');
+                viewCode.classList.add('hidden');
+                
+                tabPreview.className = "px-3 py-1.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors";
+                tabCode.className = "px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent transition-colors";
+            } else {
+                viewCode.value = rawMarkdown;
+                viewCode.classList.remove('hidden');
+                viewPreview.classList.add('hidden');
+                
+                tabCode.className = "px-3 py-1.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors";
+                tabPreview.className = "px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent transition-colors";
+            }
+        }
+
+        // Tab Listeners
+        tabPreview.addEventListener('click', () => {
+            // If switching from code back to preview, capture any manual edits first
+            if (!isPreviewMode) {
+                rawMarkdown = viewCode.value;
+            }
+            isPreviewMode = true;
+            render();
         });
 
-        // 3. Wire up the toolbar buttons using Vanilla JS event listeners
-        document.getElementById('btn-bold').addEventListener('click', (e) => { e.preventDefault(); editor.chain().focus().toggleBold().run(); });
-        document.getElementById('btn-italic').addEventListener('click', (e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run(); });
-        document.getElementById('btn-h1').addEventListener('click', (e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run(); });
-        document.getElementById('btn-h2').addEventListener('click', (e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run(); });
-        document.getElementById('btn-bullet').addEventListener('click', (e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run(); });
+        tabCode.addEventListener('click', () => {
+            isPreviewMode = false;
+            render();
+        });
 
-        // 4. Handle initialization from sessionStorage
+        // Handle manual typing in the raw editor
+        viewCode.addEventListener('input', (e) => {
+            rawMarkdown = e.target.value;
+        });
+
+        // Populate initial JSON from prior screen
         const verdictData = sessionStorage.getItem('sar_verdict');
         if (verdictData) {
             document.getElementById('verdict-input').value = JSON.stringify(JSON.parse(verdictData), null, 2);
         }
 
-        // 5. Integrate the SSE Generation Stream directly into TipTap
-        const generateBtn = document.getElementById('generate-sar-btn');
+        // SSE Stream Logic
         generateBtn.addEventListener('click', () => {
             generateBtn.disabled = true;
             generateBtn.innerText = "Generating...";
             
-            // Clear editor before starting
-            editor.commands.setContent('');
+            rawMarkdown = ""; // Reset
+            render();
             
             const sse = new EventSource('/generate-sar-mock');
 
             sse.addEventListener('section_start', (e) => {
-                editor.commands.insertContent(`<h2>${e.data}</h2><p></p>`);
+                let title = e.data;
+                try { title = JSON.parse(e.data); } catch(err) {}
+                rawMarkdown += `\n\n## ${title}\n\n`;
+                render();
             });
 
             sse.addEventListener('token', (e) => {
-                const parsed = JSON.parse(e.data);
-                editor.commands.insertContent(parsed.text);
+                let text = '';
+                try {
+                    const tokenData = JSON.parse(e.data);
+                    text = tokenData.text || '';
+                } catch(err) {}
+                rawMarkdown += text;
+                render();
                 
-                // Optional: Scroll to bottom of window as it types
+                // Auto-scroll logic if the user is looking at the bottom of the document
                 window.scrollTo(0, document.body.scrollHeight);
             });
 
             sse.addEventListener('section_done', (e) => {
-                editor.commands.insertContent('<p></p><br>');
+                rawMarkdown += `\n\n`;
+                render();
             });
 
             sse.addEventListener('complete', () => {
                 sse.close();
                 generateBtn.innerText = "Generation Complete";
+                generateBtn.classList.replace("bg-blue-600", "bg-green-600");
+                generateBtn.classList.replace("hover:bg-blue-700", "bg-green-600");
             });
 
             sse.onerror = () => {
                 sse.close();
                 generateBtn.innerText = "Error - Try Again";
+                generateBtn.classList.replace("bg-blue-600", "bg-red-600");
                 generateBtn.disabled = false;
             };
         });

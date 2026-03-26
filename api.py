@@ -254,22 +254,25 @@ async def generate_sar_mock():
     async def mock_generator():
         sections = [
             ("Filing Particulars", [
-                "The subject of this SAR is an individual suspected of involvement ",
+                "The **subject of this SAR** is an individual suspected of involvement ",
                 "in a complex web of shell companies designed to obfuscate ",
                 "the true nature of international wire transfers. ",
                 "Multiple high-value transactions were observed ",
-                "originating from jurisdictions known for weak AML controls. ",
+                "originating from jurisdictions known for weak AML controls.\n\n",
+                "| Activity Type | Total Amount | Transaction Count |\n",
+                "|--------------|--------------|-------------------|\n",
+                "| Cash Deposits | $94,500 | 12 |\n",
+                "| Outbound Wires | $90,000 | 3 |\n\n",
                 "The transaction pattern indicates suspected structuring ",
                 "with deposits consistently held just below the $10,000 threshold."
             ]),
             ("Subject Identification", [
                 "The primary subject, John Doe (DOB: 15-May-1980), ",
-                "maintains three personal and two business accounts. ",
-                "KYC onboarding documentation revealed discrepancies ",
-                "between stated employment (retail manager) and the volume ",
-                "of funds flowing through the business accounts. ",
-                "Open source intelligence links the subject to ongoing ",
-                "investigations regarding unlicensed money service businesses."
+                "maintains three personal and two business accounts.\n\n",
+                "Key findings:\n",
+                "- High velocity of funds\n",
+                "- Missing KYC documentation\n",
+                "- Adverse media hits"
             ])
         ]
         
