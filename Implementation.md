@@ -79,7 +79,7 @@ The system has two entry points that both orchestrate the same underlying graph:
 **UI Design Decisions:**
 The web dashboard operates entirely on **Tailwind CSS** delivered via CDN, conforming to a minimalistic **Google Material** white theme (using Roboto and high-contrast styling). 
 - **Space Management**: Database response payloads can be thousands of lines long. To prevent the LLM's valuable reasoning text from being pushed off-screen, all `tool_result` blocks are inserted as HTML5 `<details>` elements that are collapsed by default. Clicking them calculates their expanded height and triggers native scrolling.
-- **Investigation Flight-Recorder**: An internal JavaScript string silently compiles the entire investigation (thoughts, tool paths, exact parsed payloads, and verdicts). A final "Copy Full Investigation Log" button extracts this to the clipboard, saving analysts from manually highlighting massive browser DOM blocks.
+- **Investigation Flight-Recorder**: An internal JavaScript string silently compiles the entire investigation (thoughts, tool paths, exact parsed payloads, and verdicts). A final "Copy Full Investigation Log" button extracts this to the clipboard, saving analysts from manually highlighting massive browser DOM blocks. For perfect reproducibility, the `/investigate` SSE backend explicitly streams a `system_prompt` event block to the frontend, which is automatically prepended to the flight-recorder buffer guaranteeing that analysts export the exact dynamic rule constraints used on that specific run.
 - **Transparent LLM Identity**: Just like the CLI runner, the UI dashboard injects the exact LLM configuration from the environment and explicitly badges the active Provider and Model at the top of the interface so analysts always know who is generating the SAR.
 - **SAR Editor Handoff**: For `TRUE_POSITIVE` verdicts, the UI seamlessly injects a "Proceed to SAR Generation" action. By serializing the structured JSON verdict into `sessionStorage`, we enable a stateless handoff to the `/sar-editor` route, which features a two-panel side-by-side layout (verdict input vs. mock rich-text document generation via SSE).
 - **SAR Document Rendering**: The SAR Editor utilizes a robust Dual-View Markdown system. A raw `textarea` captures the document structure while a live preview pane renders it using `markdown-it` configured for GitHub Flavored Markdown (GFM) in Light Mode. To prevent XSS vulnerabilities from the LLM stream, all rendered HTML is rigorously sanitized via `DOMPurify` before entering the DOM. The UI cleanly toggles between raw editing and preview modes purely using Vanilla JavaScript ES Modules, avoiding any heavy React/Webpack build steps.
@@ -144,6 +144,14 @@ The sample selection in `get_transaction_history` is not a naive "top 5 by amoun
 
 The core intelligence of the agent lives in `agent/prompts.py`. This is easily the most critical file in the project. 
 
+### Dynamic Prompt Generation
+Rather than injecting a monolithic system prompt containing all AML rules into every investigation, `agent/prompts.py` exposes a `build_system_prompt(alert_data)` function. 
+
+This engine operates on two core data dictionaries (`AML_RULES_DEF` and `EVIDENCE_RULES_DEF`). When a new alert is received, the builder parses the `triggered_rules` array and dynamically formats a targeted `BASE_SYSTEM_PROMPT` containing only the specific regulatory definitions and statistical guidelines strictly relevant to that alert.
+
+**Decision Reason:** By stripping out irrelevant rules (e.g., hiding dormant account instructions when investigating a rapid-movement alert), we significantly reduce token consumption per run, improve inference speed, and mathematically prevent the LLM from hallucinating cross-contaminated rule violations.
+
+### Strict Reasoning Loop
 If you just tell an LLM "investigate this," it will randomly guess an answer without writing down its thoughts. To fix this, we engineered a strict **Reasoning Discipline** that forces the LLM to "think out loud."
 
 The prompt forces the LLM to output exactly one of two formats for every response:
