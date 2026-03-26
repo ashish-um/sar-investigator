@@ -73,12 +73,15 @@ The system has two entry points that both orchestrate the same underlying graph:
    - `POST /investigate`: Accepts the `AlertPayload` as a JSON body and streams the investigation.
    - `GET /api/alerts`: Scans the `tests/sample_alerts/` directory and returns all available True Positive and False Positive alert JSON payloads.
    - `GET /`: Serves a Jinja2-rendered `index.html` frontend dashboard. Users can dynamically select internal alerts and stream the investigation natively.
+   - `GET /sar-editor`: Serves the `sar_editor.html` mockup screen for automated document generation.
+   - `GET /generate-sar-mock`: An async generator endpoint that simulates the streaming of a generated Word-document-style SAR using Server-Sent Events.
 
 **UI Design Decisions:**
 The web dashboard operates entirely on **Tailwind CSS** delivered via CDN, conforming to a minimalistic **Google Material** white theme (using Roboto and high-contrast styling). 
 - **Space Management**: Database response payloads can be thousands of lines long. To prevent the LLM's valuable reasoning text from being pushed off-screen, all `tool_result` blocks are inserted as HTML5 `<details>` elements that are collapsed by default. Clicking them calculates their expanded height and triggers native scrolling.
 - **Investigation Flight-Recorder**: An internal JavaScript string silently compiles the entire investigation (thoughts, tool paths, exact parsed payloads, and verdicts). A final "Copy Full Investigation Log" button extracts this to the clipboard, saving analysts from manually highlighting massive browser DOM blocks.
 - **Transparent LLM Identity**: Just like the CLI runner, the UI dashboard injects the exact LLM configuration from the environment and explicitly badges the active Provider and Model at the top of the interface so analysts always know who is generating the SAR.
+- **SAR Editor Handoff**: For `TRUE_POSITIVE` verdicts, the UI seamlessly injects a "Proceed to SAR Generation" action. By serializing the structured JSON verdict into `sessionStorage`, we enable a stateless handoff to the `/sar-editor` route, which features a two-panel side-by-side layout (verdict input vs. mock rich-text document generation via SSE).
 
 Both interfaces use `graph.stream(..., stream_mode="messages")`. This streams the LLM's "Chain of Thought" back to the user token-by-token in real-time. 
 

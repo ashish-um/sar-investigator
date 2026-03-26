@@ -59,7 +59,9 @@ def _extract_text(content) -> str:
     return str(content)
 
 
-def _sse_event(event_type: str, data: dict) -> str:
+from typing import Any
+
+def _sse_event(event_type: str, data: Any) -> str:
     """Format a Server-Sent Event."""
     payload = json.dumps(data, ensure_ascii=False)
     return f"event: {event_type}\ndata: {payload}\n\n"
@@ -236,6 +238,63 @@ async def get_alerts():
 async def root(request: Request):
     """Serve the frontend HTML test client."""
     return templates.TemplateResponse(request, "index.html", {"llm_config": get_llm_config()})
+
+
+@app.get("/sar-editor")
+async def sar_editor(request: Request):
+    """Serve the SAR Editor mockup screen."""
+    return templates.TemplateResponse(request, "sar_editor.html", {"llm_config": get_llm_config()})
+
+
+import asyncio
+
+@app.get("/generate-sar-mock")
+async def generate_sar_mock():
+    """Simulate streaming of a generated SAR document via SSE."""
+    async def mock_generator():
+        sections = [
+            ("Filing Particulars", [
+                "The subject of this SAR is an individual suspected of involvement ",
+                "in a complex web of shell companies designed to obfuscate ",
+                "the true nature of international wire transfers. ",
+                "Multiple high-value transactions were observed ",
+                "originating from jurisdictions known for weak AML controls. ",
+                "The transaction pattern indicates suspected structuring ",
+                "with deposits consistently held just below the $10,000 threshold."
+            ]),
+            ("Subject Identification", [
+                "The primary subject, John Doe (DOB: 15-May-1980), ",
+                "maintains three personal and two business accounts. ",
+                "KYC onboarding documentation revealed discrepancies ",
+                "between stated employment (retail manager) and the volume ",
+                "of funds flowing through the business accounts. ",
+                "Open source intelligence links the subject to ongoing ",
+                "investigations regarding unlicensed money service businesses."
+            ])
+        ]
+        
+        for section_title, tokens in sections:
+            yield _sse_event("section_start", section_title)
+            await asyncio.sleep(0.5)
+            
+            for token in tokens:
+                yield _sse_event("token", {"text": token})
+                await asyncio.sleep(0.05)
+                
+            yield _sse_event("section_done", section_title)
+            await asyncio.sleep(0.5)
+            
+        yield _sse_event("complete", "done")
+
+    return StreamingResponse(
+        mock_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 # ── Data Lookup Endpoints (Evidence Verification) ────────────────────────

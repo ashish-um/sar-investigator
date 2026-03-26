@@ -459,6 +459,19 @@ function playVerdict(data, fullLog) {
     };
     if (fullLog) container.appendChild(copyBtn);
 
+    // Handoff to SAR Editor
+    if (data.verdict === 'TRUE_POSITIVE' || data.sar_recommended) {
+        const proceedBtn = document.createElement('button');
+        // bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded mt-4
+        proceedBtn.className = 'w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded mt-4 shadow font-semibold transition-colors';
+        proceedBtn.textContent = 'Proceed to SAR Generation';
+        proceedBtn.onclick = () => {
+            sessionStorage.setItem('sar_verdict', JSON.stringify(data));
+            window.location.href = '/sar-editor';
+        };
+        container.appendChild(proceedBtn);
+    }
+
     outputContainer.appendChild(container);
     scrollToBottom();
 }

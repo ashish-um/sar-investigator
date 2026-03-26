@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+{% include 'components/head.html' %}
+<body class="m-0 p-0 font-sans bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    {% include 'components/header.html' %}
+
+    <!-- Main Content -->
+    <main class="flex flex-1 overflow-hidden relative">
+        <!-- Left Panel (Input & Controls) -->
+        <section class="w-[420px] flex-shrink-0 bg-white border-r border-slate-200 shadow-[2px_0_8px_-4px_rgba(0,0,0,0.1)] z-10 flex flex-col h-full overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 relative flex items-center justify-between">
+                <h2 class="font-bold text-slate-700 text-sm tracking-wide flex items-center gap-2 uppercase">
+                    FINAL VERDICT JSON
+                </h2>
+            </div>
+            <div class="p-5 flex-1 flex flex-col gap-4 overflow-y-auto">
+                <textarea id="verdict-input" class="w-full flex-1 p-3 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs text-slate-700 bg-slate-50 whitespace-pre shadow-inner resize-none" placeholder="JSON will appear here..."></textarea>
+                <button id="generate-sar-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    GENERATE SAR DOCUMENT
+                </button>
+            </div>
+        </section>
+
+        <!-- Right Panel (The Record) -->
+        <section class="flex-1 bg-slate-100 flex flex-col overflow-y-auto w-full">
+            <div class="max-w-3xl w-full bg-white shadow-lg mx-auto mt-8 mb-8 p-12 min-h-[1056px] ring-1 ring-slate-200">
+                <div id="doc-content" class="prose prose-sm max-w-none text-slate-800 leading-relaxed font-sans">
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const verdictInput = document.getElementById("verdict-input");
+            const generateBtn = document.getElementById("generate-sar-btn");
+            const docContent = document.getElementById("doc-content");
+
+            const savedVerdict = sessionStorage.getItem('sar_verdict');
+            if (savedVerdict) {
+                try {
+                    const parsed = JSON.parse(savedVerdict);
+                    verdictInput.value = JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    verdictInput.value = savedVerdict;
+                }
+            }
+
+            generateBtn.addEventListener("click", () => {
+                generateBtn.disabled = true;
+                generateBtn.textContent = "Generating...";
+                docContent.innerHTML = "";
+
+                const source = new EventSource('/generate-sar-mock');
+
+                source.addEventListener("section_start", (e) => {
+                    // Try parsing cleanly if it was stringified, e.g. "Filing Particulars"
+                    let title = e.data;
+                    try { title = JSON.parse(e.data); } catch(err) {}
+                    
+                    const heading = document.createElement("h3");
+                    heading.className = "text-xl font-bold mt-6 mb-4 text-slate-800 border-b border-slate-200 pb-2";
+                    heading.textContent = title;
+                    docContent.appendChild(heading);
+                });
+
+                source.addEventListener("token", (e) => {
+                    let text = '';
+                    try {
+                        const tokenData = JSON.parse(e.data);
+                        text = tokenData.text || '';
+                    } catch(err) {}
+
+                    const span = document.createElement("span");
+                    span.textContent = text;
+                    docContent.appendChild(span);
+
+                    // Scroll the container to the bottom so the user tracks the typing
+                    docContent.parentElement.parentElement.scrollTo({
+                        top: docContent.parentElement.parentElement.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                });
+
+                source.addEventListener("section_done", (e) => {
+                    const br = document.createElement("br");
+                    docContent.appendChild(br);
+                    docContent.appendChild(document.createElement("br"));
+                });
+
+                source.addEventListener("complete", (e) => {
+                    source.close();
+                    generateBtn.textContent = "Generation Complete";
+                    generateBtn.classList.replace("bg-blue-600", "bg-green-600");
+                    generateBtn.classList.replace("hover:bg-blue-700", "bg-green-600");
+                });
+
+                source.onerror = (err) => {
+                    source.close();
+                    generateBtn.textContent = "Generation Failed";
+                    generateBtn.classList.replace("bg-blue-600", "bg-red-600");
+                    alert("Error streaming generation data");
+                };
+            });
+        });
+    </script>
+</body>
+</html>
