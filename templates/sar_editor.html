@@ -5,6 +5,13 @@
 
     {% include 'components/header.html' %}
 
+    <style>
+        /* Hide the default markdown-it footnote block from the web view */
+        .footnotes, .footnotes-sep {
+            display: none !important;
+        }
+    </style>
+
     <!-- Main Content -->
     <main class="flex flex-1 overflow-hidden relative">
         <!-- Left Panel (Input & Controls) -->
@@ -75,28 +82,66 @@
         const generateBtn = document.getElementById('generate-sar-btn');
 
         // 3. Update the render function to Parse -> Sanitize -> Inject
-        function render() {
-            if (isPreviewMode) {
-                // Parse the markdown, then rigorously sanitize it before injecting into the DOM
-                const dirtyHtml = md.render(rawMarkdown);
-                const cleanHtml = DOMPurify.sanitize(dirtyHtml);
+    // 1. Create a single, reusable floating tooltip container using Tailwind classes
+    const tooltip = document.createElement('div');
+    tooltip.className = 'absolute z-50 hidden max-w-sm p-4 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg shadow-xl pointer-events-none transition-opacity duration-200 opacity-0';
+    document.body.appendChild(tooltip);
+
+    // 2. Updated Render Function
+    function render() {
+        if (isPreviewMode) {
+            // A. Revert chunking: Parse the whole document at once to ensure unique footnote IDs
+            const dirtyHtml = md.render(rawMarkdown);
+            const cleanHtml = DOMPurify.sanitize(dirtyHtml);
+            viewPreview.innerHTML = cleanHtml;
+            
+            // B. Attach Hover Logic to all footnote references
+            const refs = viewPreview.querySelectorAll('.footnote-ref a');
+            refs.forEach(ref => {
+                const targetId = ref.getAttribute('href').substring(1); // e.g., "fn1"
+                const footnoteLi = document.getElementById(targetId);
                 
-                viewPreview.innerHTML = cleanHtml;
-                
-                viewPreview.classList.remove('hidden');
-                viewCode.classList.add('hidden');
-                
-                tabPreview.className = "px-3 py-1.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors";
-                tabCode.className = "px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent transition-colors";
-            } else {
-                viewCode.value = rawMarkdown;
-                viewCode.classList.remove('hidden');
-                viewPreview.classList.add('hidden');
-                
-                tabCode.className = "px-3 py-1.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors";
-                tabPreview.className = "px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent transition-colors";
-            }
+                if (footnoteLi) {
+                    // Extract the text, but remove the "↩" return link since it's a popup
+                    const content = footnoteLi.cloneNode(true);
+                    const backref = content.querySelector('.footnote-backref');
+                    if (backref) backref.remove();
+
+                    // Show tooltip on hover
+                    ref.addEventListener('mouseenter', (e) => {
+                        tooltip.innerHTML = content.innerHTML;
+                        tooltip.classList.remove('hidden');
+                        
+                        // Small timeout to trigger CSS fade-in
+                        setTimeout(() => tooltip.classList.remove('opacity-0'), 10);
+                        
+                        // Position the tooltip directly below the superscript
+                        const rect = ref.getBoundingClientRect();
+                        tooltip.style.left = `${rect.left + window.scrollX}px`;
+                        tooltip.style.top = `${rect.bottom + window.scrollY + 8}px`;
+                    });
+
+                    // Hide tooltip on mouse exit
+                    ref.addEventListener('mouseleave', () => {
+                        tooltip.classList.add('opacity-0');
+                        setTimeout(() => tooltip.classList.add('hidden'), 200); // Wait for fade out
+                    });
+                }
+            });
+
+            // C. Update Tabs
+            viewPreview.classList.remove('hidden');
+            viewCode.classList.add('hidden');
+            tabPreview.className = "px-3 py-1.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors";
+            tabCode.className = "px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent transition-colors";
+        } else {
+            viewCode.value = rawMarkdown;
+            viewCode.classList.remove('hidden');
+            viewPreview.classList.add('hidden');
+            tabCode.className = "px-3 py-1.5 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors";
+            tabPreview.className = "px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent transition-colors";
         }
+    }
 
         // Tab Listeners
         tabPreview.addEventListener('click', () => {
