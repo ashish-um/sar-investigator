@@ -1,6 +1,6 @@
 import json
 from agent.llm import get_llm
-from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT, SECTION_5_CHRONOLOGY_PROMPT, SECTION_6_RULE_ANALYSIS_PROMPT, SECTION_6_STATUTORY_PROMPT
+from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT, SECTION_5_CHRONOLOGY_PROMPT, SECTION_6_RULE_ANALYSIS_PROMPT, SECTION_6_STATUTORY_PROMPT, SECTION_7_WATCHLIST_PROMPT
 
 from typing import Any
 
@@ -262,3 +262,39 @@ async def generate_section_6(verdict: dict, legal_context: dict):
 
     except Exception as e:
         yield _sse_event("error", {"section": "section_6", "message": str(e)})
+
+async def generate_section_7(verdict: dict, legal_context: dict):
+    """
+    Generates Section 7: Watchlist Screening Results.
+    """
+    try:
+        llm = get_llm()
+        
+        # Inject only the sanctions-specific laws to keep the LLM focused
+        prompt = SECTION_7_WATCHLIST_PROMPT.format(
+            xai_formatting_rules=XAI_FORMATTING_RULES,
+            verdict_json=json.dumps(verdict, indent=2),
+            sanctions_specific="\n- ".join(legal_context.get("sanctions_specific", []))
+        )
+
+        yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 7 WATCHLIST PROMPT ===\n{prompt}\n=========================================\n\n"})
+
+        yield _sse_event("section_start", "section_7")
+
+        accumulated_text = ""
+        for chunk in llm.stream(prompt):
+            text_chunk = _extract_text(getattr(chunk, "content", ""))
+            if text_chunk:
+                accumulated_text += text_chunk
+                yield _sse_event("token", {
+                    "section": "section_7",
+                    "token": text_chunk
+                })
+        
+        yield _sse_event("section_done", "section_7")
+
+    except Exception as e:
+        yield _sse_event("error", {
+            "section": "section_7", 
+            "message": str(e)
+        })

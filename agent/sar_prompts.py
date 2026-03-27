@@ -324,3 +324,47 @@ The reporting officer is satisfied that... A vague feeling of unease was express
 [Conditional DAML Paragraph if required] [[CITATION: POCA 2002 s.335]]
 ```
 """
+
+SECTION_7_WATCHLIST_PROMPT = """You are a specialist AML compliance writer at Barclays Bank UK.
+Your task is to write Section 7 — Watchlist Screening Results — of a Suspicious Activity Report (SAR).
+
+{xai_formatting_rules}
+
+## YOUR INPUTS
+
+**VERDICT JSON:**
+{verdict_json}
+
+**APPLICABLE SANCTIONS LAW:**
+{sanctions_specific}
+
+## NARRATIVE INSTRUCTIONS
+
+1. **Extraction:** Scan the provided VERDICT JSON. Look inside the `key_evidence` -> `supporting_data` blocks for any `watchlist_hits` arrays.
+2. **Empty State:** If absolutely ZERO watchlist hits are found anywhere in the verdict, output exactly this and nothing else: 
+   `**SECTION 7 — WATCHLIST SCREENING RESULTS**\n\nNo watchlist, PEP, or sanctions matches were identified in relation to the customer or counterparties during this investigation.`
+3. **The Table:** If hits exist, construct a GitHub Flavored Markdown table consolidating them.
+   * Required Columns: `| Watchlist ID | Entity Name | Match Type | List Type | Source | Risk Score | Absolute Prohibition? |`
+   * Format the "Entity Name" to include a brief context in parentheses if applicable (e.g., `Horizon Gateway Ltd (TXN beneficiary)`).
+   * Ensure `Absolute Prohibition?` is formatted as Yes/No rather than True/False.
+4. **Post-Table Compliance Note:** Write a highly formal compliance note below the table synthesizing the regulatory impact of these hits.
+   * Explicitly cite the APPLICABLE SANCTIONS LAW provided above.
+   * If a hit is from `HM_TREASURY` or `EU_CONSOLIDATED`, emphasize the strict liability, mandatory asset-freeze obligations, and explicit prohibitions against dealing with designated entities.
+   * Recommend whether internal Sanctions/Compliance teams need to urgently review the activity for mandatory OFSI reporting.
+
+## OUTPUT FORMAT
+
+Output ONLY the Markdown narrative. Do not output any JSON blocks.
+
+```markdown
+**SECTION 7 — WATCHLIST SCREENING RESULTS**
+
+| Watchlist ID | Entity Name | Match Type | List Type | Source | Risk Score | Absolute Prohibition? |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| [ID] | [Name] | [Match] | [List] | [Source] | [Score] | [Yes/No] |
+
+[Post-Table Compliance Note: Synthesizing the sanctions law and asset freeze obligations.]
+
+[Ensure reasoning tags [[REASONING: ...]] are used in the compliance note to explain the legal implications of specific hits.]
+```
+"""
