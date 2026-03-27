@@ -21,6 +21,7 @@ from agent.prompts import build_system_prompt
 from agent.graph import graph, drain_rate_limit_events, clear_rate_limit_events
 from agent.llm import get_llm_config
 from agent.sar_generator import generate_section_3
+from agent.legal_context_builder import build_legal_context
 
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -260,8 +261,13 @@ async def generate_sar(request: Request):
     Real two-call LLM pipeline to generate Section 3 of the SAR.
     """
     verdict = await request.json()
+    
+    # 1. Build the exact legal context ONCE for the entire document
+    legal_context = build_legal_context(verdict)
+    
+    # 2. Pass BOTH verdict and context into the generators
     return StreamingResponse(
-        generate_section_3(verdict),
+        generate_section_3(verdict, legal_context),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

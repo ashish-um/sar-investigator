@@ -100,28 +100,17 @@ ORIGINAL VERDICT JSON:
 GLOSSARY CODE IDENTIFICATION RESULT:
 {code_identification_json}
 
-## CASE LAW — SUSPICION THRESHOLD LANGUAGE
+## INJECTED LEGAL CONTEXT
+You must strictly align your narrative with these specific laws and thresholds:
 
-Select the correct tier based on the confidence field in the verdict:
+**Always Applicable Law:**
+{always_present}
 
-**LOW confidence** — Da Silva only:
-"The reporting officer has formed a suspicion, meeting the threshold 
-established in R v Da Silva [2006] EWCA Crim 1654 — namely that there 
-exists a possibility, which is more than fanciful, that the transactions 
-described herein represent the proceeds of criminal conduct."
+**Applicable Case Law (Suspicion Threshold):**
+{caselaw}
 
-**MEDIUM confidence** — Add Shah:
-"In accordance with Shah v HSBC Private Bank (UK) Ltd [2012] EWCA Civ 
-1148, the MLRO has independently formed this suspicion based on logical 
-and detailed analysis of the evidence, not on a vague feeling of unease."
-
-**HIGH confidence** — Add Anwoir:
-"The evidence admits no innocent explanation. In accordance with R v 
-Anwoir [2008] EWCA Crim 1354, the circumstances are such that the only 
-reasonable inference is that the property is criminal in origin."
-
-Always close with: "A vague feeling of unease was expressly excluded as 
-the basis for this report."
+**Rule-Specific Law Triggered by this Activity:**
+{rule_specific}
 
 ## NARRATIVE STYLE RULES
 
@@ -146,8 +135,7 @@ horizontal rule (---).
 
 **{codes_string}**
 
-[Opening paragraph: statutory basis — cite POCA 2002 s.330 and MLR 2017. 
-State the Da Silva suspicion threshold. One short paragraph.]
+[Opening paragraph: statutory basis — explicitly cite POCA 2002 s.330 and MLR 2017. State the suspicion threshold using the EXACT text provided in the "Applicable Case Law" section above. One short paragraph.]
 
 [Second paragraph: confirm suspicion is grounded in specific factual 
 evidence, not vague unease. Add Shah paragraph if MEDIUM confidence. 

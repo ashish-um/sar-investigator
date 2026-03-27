@@ -26,7 +26,7 @@ def _sse_event(event_type: str, data: Any) -> str:
     payload = json.dumps(data, ensure_ascii=False)
     return f"event: {event_type}\ndata: {payload}\n\n"
 
-async def generate_section_3(verdict: dict):
+async def generate_section_3(verdict: dict, legal_context: dict):
     """
     Two-call pipeline to generate Section 3 of the SAR.
     1. Call 1: Identify Glossary Codes (non-streaming)
@@ -64,8 +64,13 @@ async def generate_section_3(verdict: dict):
             codes_string=code_identification.get("codes_string", ""),
             ordered_codes=json.dumps(code_identification.get("ordered_codes", [])),
             ctfi_required=str(code_identification.get("ctfi_required", False)).lower(),
-            daml_required=str(code_identification.get("daml_required", False)).lower()
+            daml_required=str(code_identification.get("daml_required", False)).lower(),
+            always_present="\n- ".join(legal_context["always_present"]),
+            caselaw=legal_context["caselaw"],
+            rule_specific="\n- ".join(legal_context["rule_specific"])
         )
+
+        yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 3 NARRATIVE PROMPT ===\n{prompt2}\n========================================\n\n"})
 
         accumulated_narrative = ""
         for chunk in llm.stream(prompt2):
