@@ -1,6 +1,6 @@
 import json
 from agent.llm import get_llm
-from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES
+from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT
 
 from typing import Any
 
@@ -116,22 +116,39 @@ async def generate_section_3(verdict: dict, legal_context: dict):
 
 async def generate_section_4(verdict: dict, legal_context: dict):
     """
-    Stub for Section 4: Customer and Account Profile.
-    To be fully implemented later.
+    Generates Section 4: Customer and Account Profile.
+    Streams tokens via SSE to the frontend.
     """
     try:
-        yield _sse_event("section_start", "section_4")
+        llm = get_llm()
         
-        # Mock streaming response for UI testing
-        mock_text = "This is a placeholder for **Section 4 — Customer and Account Profile**. [[CITATION: Mock Data]]"
-        for word in mock_text.split(" "):
-            yield _sse_event("token", {
-                "section": "section_4",
-                "token": word + " "
-            })
-            import asyncio
-            await asyncio.sleep(0.05)
-            
-        yield _sse_event("section_done", {"section_id": "section_4"})
+        # Format the prompt, injecting ONLY the always_present legal context
+        prompt = SECTION_4_PROFILE_PROMPT.format(
+            xai_formatting_rules=XAI_FORMATTING_RULES,
+            verdict_json=json.dumps(verdict, indent=2),
+            always_present="\n- ".join(legal_context.get("always_present", []))
+        )
+
+        yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 4 PROFILE PROMPT ===\n{prompt}\n======================================\n\n"})
+
+        # Signal frontend to start streaming this section
+        yield _sse_event("section_start", "section_4")
+
+        accumulated_text = ""
+        for chunk in llm.stream(prompt):
+            text_chunk = _extract_text(getattr(chunk, "content", ""))
+            if text_chunk:
+                accumulated_text += text_chunk
+                yield _sse_event("token", {
+                    "section": "section_4",
+                    "token": text_chunk
+                })
+        
+        # Signal frontend that the stream is complete
+        yield _sse_event("section_done", "section_4")
+
     except Exception as e:
-        yield _sse_event("error", {"section": "section_4", "message": str(e)})
+        yield _sse_event("error", {
+            "section": "section_4", 
+            "message": str(e)
+        })

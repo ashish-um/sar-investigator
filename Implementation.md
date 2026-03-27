@@ -228,6 +228,11 @@ The `generate_section_3()` orchestrator located in `agent/sar_generator.py` reli
 
 **Design Decision:** By deliberately isolating the logical matrix mapping (JSON validation) from the creative prose writing (Markdown generation) into two physically independent LLM calls, we eliminate dual-focus cognitive strain on the models. This vastly reduces formatting hallucinations and ensures that the final SAR document citations perfectly align with the NCA code selection.
 
+### Section 4: Customer and Account Profile
+
+The `generate_section_4()` generator is explicitly designed to calculate and highlight the **Income Multiple**—the discrepancy between the customer's KYC baseline declared income and the flagged suspicious activity volume. 
+- It evaluates the `verdict_json` using the `SECTION_4_PROFILE_PROMPT` bounded by strict `always_present` statutory obligations, explicitly preventing the LLM from hallucinating deep legal analysis (which is reserved for Section 6).
+- To guarantee full XAI (Explainable AI) transparency, the exact formatted prompt is immediately yielded to the UI's "Agent Raw Reasoning" console via `debug_token` events before the standard markdown generation stream even begins.
 ---
 
 ## Conclusion

@@ -172,3 +172,41 @@ Output ONLY the Markdown narrative. Do not output any JSON block.
 - **XXCODEXX** — [Full code name]. [Full paragraph...]
 ```
 """
+
+SECTION_4_PROFILE_PROMPT = """You are a specialist AML compliance writer at Barclays Bank UK.
+Your task is to write Section 4 — Customer and Account Profile — of a Suspicious Activity Report (SAR).
+
+{xai_formatting_rules}
+
+## YOUR INPUTS
+
+**VERDICT JSON (Contains Customer Profile and Evidence):**
+{verdict_json}
+
+**STATUTORY OBLIGATION:**
+{always_present}
+
+## NARRATIVE INSTRUCTIONS
+
+1. **Profile Summary:** Begin by summarizing the customer's KYC profile (Nationality, Onboarding Date, Occupation, Declared Annual Income, Risk Rating, and any PEP/Sanctions flags). 
+2. **Account Baseline:** Describe the account type and establish what the "normal" expected behavior should be based on their declared occupation and income.
+3. **The Discrepancy (Income Multiple):** You MUST explicitly calculate and state the "Income Multiple". Compare the total value of the suspicious activity against the customer's declared annual income (e.g., "The flagged amount of £200,000 represents 322% of the customer's declared annual income of £62,000").
+4. **Sanctions/PEP Context (If Applicable):** If the customer has an active Sanctions or PEP flag, explicitly mention it and state that it is a material risk indicator requiring Enhanced Due Diligence.
+5. **No Rule Analysis:** Do not perform deep legal analysis or cite specific POCA/MLR statutes beyond the basic CDD obligations. Save the deep legal analysis for Section 6.
+
+## OUTPUT FORMAT
+
+Output ONLY the Markdown narrative. Do not output any JSON blocks.
+
+```markdown
+**SECTION 4 — CUSTOMER AND ACCOUNT PROFILE**
+
+[Paragraph 1: Customer identity, occupation, and declared income.]
+
+[Paragraph 2: KYC Status, Risk Rating, and PEP/Sanctions exposure if any.]
+
+[Paragraph 3: The Account baseline vs the Suspicious Activity volume, explicitly stating the Income Multiple percentage calculation to highlight the mismatch.]
+
+[Ensure all Markdown Footnotes/Citations are placed inline using [[CITATION: Source]]. Use [[REASONING: ...]] tags for your calculations.]
+```
+"""
