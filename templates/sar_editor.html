@@ -35,7 +35,7 @@
             </div>
         </section>
 
-        <!-- Right Panel (The Record) -->
+        <!-- Middle Panel (The Record) -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown-light.min.css" />
         <div id="right-panel-scroll" class="flex-1 bg-slate-100 overflow-y-auto h-full relative border-l border-slate-200">
             
@@ -66,6 +66,33 @@
 
                 <textarea id="view-code" class="w-full h-[800px] p-4 font-mono text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y hidden" spellcheck="false" placeholder="Raw markdown will appear here..."></textarea>
                 
+            </div>
+        </div>
+
+        <!-- Right Panel (Generation Control) -->
+        <div class="w-[320px] flex-shrink-0 bg-white border-l border-slate-200 shadow-sm overflow-y-auto p-4 flex flex-col gap-4 h-full relative z-10">
+            <h2 class="text-lg font-bold text-slate-800 border-b pb-2 mb-2">Generation Control</h2>
+            
+            <div class="border rounded p-3 shadow-sm bg-slate-50 flex flex-col gap-2">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-sm text-slate-700">Section 3</span>
+                    <span id="status-section_3" class="text-xs px-2 py-1 bg-slate-200 rounded text-slate-600">Pending</span>
+                </div>
+                <span class="text-xs text-slate-500">Glossary Code Declaration & Basis of Suspicion</span>
+                <button onclick="triggerSectionGeneration('section_3')" class="mt-2 w-full bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm py-1 rounded transition-colors">
+                    Generate Section 3
+                </button>
+            </div>
+
+            <div class="border rounded p-3 shadow-sm bg-slate-50 flex flex-col gap-2">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-sm text-slate-700">Section 4</span>
+                    <span id="status-section_4" class="text-xs px-2 py-1 bg-slate-200 rounded text-slate-600">Pending</span>
+                </div>
+                <span class="text-xs text-slate-500">Customer and Account Profile</span>
+                <button onclick="triggerSectionGeneration('section_4')" class="mt-2 w-full bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm py-1 rounded transition-colors">
+                    Generate Section 4
+                </button>
             </div>
         </div>
     </main>
@@ -228,74 +255,106 @@
         }
 
         // SSE Stream Logic
-        generateBtn.addEventListener('click', async () => {
-            generateBtn.disabled = true;
-            generateBtn.innerText = "Generating...";
-            
-            rawMarkdown = ""; // Reset
-            render();
-            
+        window.currentAbortController = null;
+
+        window.triggerSectionGeneration = function(sectionId) {
+            const generateBtn = document.getElementById('generate-sar-btn');
             const debugContainer = document.getElementById('debug-codes-stream');
-            if (debugContainer) debugContainer.textContent = "Awaiting stream...";
             
+            // 1. Get verdict from session storage or input
             const verdictInput = document.getElementById('verdict-input').value;
-            let verdict = {};
+            let verdictStr = '{}';
             if (verdictInput) {
                 try {
-                    verdict = JSON.parse(verdictInput);
+                    JSON.parse(verdictInput);
+                    verdictStr = verdictInput;
                 } catch (e) {
                     console.error("Invalid JSON verdict");
+                    alert("Invalid JSON verdict");
+                    return;
                 }
+            } else {
+                verdictStr = sessionStorage.getItem('sar_verdict') || '{}';
             }
 
-            try {
-                const response = await fetch('/generate-sar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(verdict)
-                });
+            // 2. Update Right Panel UI Status
+            const statusBadge = document.getElementById(`status-${sectionId}`);
+            if(statusBadge) {
+                statusBadge.textContent = "Generating...";
+                statusBadge.className = "text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded";
+            }
 
+            if (generateBtn && sectionId === 'section_3') {
+                generateBtn.disabled = true;
+                generateBtn.innerText = "Generating Section 3...";
+            }
+
+            // 3. Close existing stream if one is running
+            if (window.currentAbortController) {
+                window.currentAbortController.abort();
+            }
+            window.currentAbortController = new AbortController();
+
+            // 4. Use fetch() for POST requests with AbortController
+            fetch(`/generate-section/${sectionId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: verdictStr,
+                signal: window.currentAbortController.signal
+            }).then(response => {
                 if (!response.body) throw new Error("No response body");
-                
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder("utf-8");
-                let buffer = "";
+                let buffer = '';
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    
-                    buffer += decoder.decode(value, { stream: true });
-                    const events = buffer.split('\n\n');
-                    buffer = events.pop() || "";
-
-                    for (const eventStr of events) {
-                        if (!eventStr.trim()) continue;
-                        
-                        const lines = eventStr.split('\n');
-                        let eventType = 'message';
-                        let eventData = '';
-                        
-                        for (const line of lines) {
-                            if (line.startsWith('event:')) {
-                                eventType = line.substring(6).trim();
-                            } else if (line.startsWith('data:')) {
-                                eventData += line.substring(5).trim();
+                function read() {
+                    reader.read().then(({done, value}) => {
+                        if (done) {
+                            if(statusBadge) {
+                                statusBadge.textContent = "Done";
+                                statusBadge.className = "text-xs px-2 py-1 bg-green-100 text-green-700 rounded";
                             }
+                            if (generateBtn && sectionId === 'section_3') {
+                                generateBtn.innerText = "Generation Complete";
+                                generateBtn.classList.replace("bg-blue-600", "bg-green-600");
+                                generateBtn.disabled = false;
+                            }
+                            return;
                         }
 
-                        if (eventData) {
-                            try {
-                                const parsed = JSON.parse(eventData);
-                                
+                        // Append new data to the buffer
+                        buffer += decoder.decode(value, {stream: true});
+
+                        // SSE events are separated by double newlines
+                        const parts = buffer.split('\n\n');
+
+                        // The last part might be incomplete, so pop it back into the buffer
+                        buffer = parts.pop() || "";
+
+                        for (const part of parts) {
+                            if (part.trim() === '') continue;
+
+                            // Extract event type and data payload
+                            const eventMatch = part.match(/^event:\s*(.+)$/m);
+                            const dataMatch = part.match(/^data:\s*(.+)$/m);
+
+                            if (eventMatch && dataMatch) {
+                                const eventType = eventMatch[1].trim();
+                                let eventData = dataMatch[1].trim();
+
+                                try {
+                                    eventData = JSON.parse(eventData);
+                                } catch (e) {
+                                    // Fallback for raw string events
+                                }
+
                                 if (eventType === 'section_start') {
-                                    rawMarkdown += `\n\n## ${parsed}\n\n`;
+                                    rawMarkdown += `\n\n## ${eventData}\n\n`;
                                     render();
                                 } else if (eventType === 'token') {
-                                    const tokenText = parsed.token || parsed.text || "";
+                                    const tokenText = eventData.token || eventData.text || "";
                                     rawMarkdown += tokenText;
                                     render();
-                                    
                                     const scrollContainer = document.getElementById('right-panel-scroll');
                                     if (scrollContainer) {
                                         scrollContainer.scrollTop = scrollContainer.scrollHeight;
@@ -305,50 +364,72 @@
                                         if (debugContainer.textContent === "Awaiting stream...") {
                                             debugContainer.textContent = "";
                                         }
-                                        debugContainer.textContent += parsed.token;
+                                        debugContainer.textContent += eventData.token || eventData.text || "";
                                         debugContainer.parentElement.scrollTop = debugContainer.parentElement.scrollHeight;
                                     }
                                 } else if (eventType === 'section_done') {
                                     rawMarkdown += `\n\n`;
                                     render();
                                 } else if (eventType === 'section3_codes_identified') {
-                                    console.log("Section 3 Codes Identified:", parsed);
+                                    console.log("Section 3 Codes Identified:", eventData);
                                 } else if (eventType === 'section3_done') {
-                                    console.log("Section 3 Done:", parsed);
+                                    console.log("Section 3 Done:", eventData);
                                     sessionStorage.setItem('section3_metadata', JSON.stringify({
-                                        glossary_codes: parsed.glossary_codes,
-                                        codes_string: parsed.codes_string
+                                        glossary_codes: eventData.glossary_codes,
+                                        codes_string: eventData.codes_string
                                     }));
                                 } else if (eventType === 'error') {
-                                    console.error("SAR Generation Error:", parsed);
-                                    generateBtn.innerText = "Error - Try Again";
-                                    generateBtn.classList.replace("bg-blue-600", "bg-red-600");
-                                    generateBtn.disabled = false;
-                                } else if (eventType === 'complete') {
-                                    generateBtn.innerText = "Generation Complete";
-                                    generateBtn.classList.replace("bg-blue-600", "bg-green-600");
-                                    generateBtn.classList.replace("hover:bg-blue-700", "bg-green-600");
+                                    console.error("SAR Generation Error:", eventData);
+                                    if (statusBadge) {
+                                        statusBadge.textContent = "Error";
+                                        statusBadge.className = "text-xs px-2 py-1 bg-red-100 text-red-700 rounded";
+                                    }
+                                    if (generateBtn && sectionId === 'section_3') {
+                                        generateBtn.innerText = "Error - Try Again";
+                                        generateBtn.classList.replace("bg-blue-600", "bg-red-600");
+                                        generateBtn.disabled = false;
+                                    }
                                 }
-                            } catch (err) {
-                                console.error('Failed to parse SSE JSON data:', err, eventData);
                             }
                         }
-                    }
+
+                        read(); // Continue reading stream
+                    }).catch(err => {
+                        if (err.name === 'AbortError') return;
+                        console.error("Stream reader failed:", err);
+                        if(statusBadge) {
+                            statusBadge.textContent = "Error";
+                            statusBadge.className = "text-xs px-2 py-1 bg-red-100 text-red-700 rounded";
+                        }
+                    });
                 }
+                read();
+            }).catch(err => {
+                if (err.name === 'AbortError') return;
+                console.error("Stream failed:", err);
+                if(statusBadge) {
+                    statusBadge.textContent = "Error";
+                    statusBadge.className = "text-xs px-2 py-1 bg-red-100 text-red-700 rounded";
+                }
+                if (generateBtn && sectionId === 'section_3') {
+                    generateBtn.innerText = "Error - Try Again";
+                    generateBtn.classList.replace("bg-blue-600", "bg-red-600");
+                    generateBtn.disabled = false;
+                }
+            });
+        };
+
+        // 5. Hook up the Main "Generate SAR Document" button
+        if (generateBtn) {
+            generateBtn.addEventListener('click', () => {
+                rawMarkdown = ""; // Clear on main button click
+                render();
+                const debugContainer = document.getElementById('debug-codes-stream');
+                if (debugContainer) debugContainer.textContent = "Awaiting stream...";
                 
-                // If stream finishes normally and wasn't marked complete by an event message
-                if (generateBtn.innerText === "Generating...") {
-                    generateBtn.innerText = "Generation Complete";
-                    generateBtn.classList.replace("bg-blue-600", "bg-green-600");
-                    generateBtn.classList.replace("hover:bg-blue-700", "bg-green-600");
-                }
-            } catch (error) {
-                console.error("Stream error:", error);
-                generateBtn.innerText = "Error - Try Again";
-                generateBtn.classList.replace("bg-blue-600", "bg-red-600");
-                generateBtn.disabled = false;
-            }
-        });
+                triggerSectionGeneration('section_3');
+            });
+        }
     </script>
 </body>
 </html>

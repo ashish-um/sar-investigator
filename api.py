@@ -10,7 +10,7 @@ Run with:  uvicorn api:app --reload
 import json
 import os
 import re
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
@@ -20,7 +20,7 @@ from schemas.alert import AlertPayload
 from agent.prompts import build_system_prompt
 from agent.graph import graph, drain_rate_limit_events, clear_rate_limit_events
 from agent.llm import get_llm_config
-from agent.sar_generator import generate_section_3
+from agent.sar_generator import generate_section_3, generate_section_4
 from agent.legal_context_builder import build_legal_context
 
 import logging
@@ -255,19 +255,29 @@ async def sar_editor(request: Request):
 
 import asyncio
 
-@app.post("/generate-sar")
-async def generate_sar(request: Request):
+@app.post("/generate-section/{section_id}")
+async def generate_specific_section(section_id: str, request: Request):
     """
-    Real two-call LLM pipeline to generate Section 3 of the SAR.
+    Modular endpoint to generate a specific SAR section on demand.
     """
-    verdict = await request.json()
+    try:
+        verdict = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
     
-    # 1. Build the exact legal context ONCE for the entire document
+    # 1. Build the legal context synchronously ONCE
     legal_context = build_legal_context(verdict)
     
-    # 2. Pass BOTH verdict and context into the generators
+    # 2. Route to the correct section generator
+    if section_id == "section_3":
+        generator = generate_section_3(verdict, legal_context)
+    elif section_id == "section_4":
+        generator = generate_section_4(verdict, legal_context)
+    else:
+        raise HTTPException(status_code=404, detail=f"Generator for {section_id} not implemented yet.")
+
     return StreamingResponse(
-        generate_section_3(verdict, legal_context),
+        generator, 
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

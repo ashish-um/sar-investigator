@@ -113,3 +113,25 @@ async def generate_section_3(verdict: dict, legal_context: dict):
             "section": "section_3", 
             "message": str(e)
         })
+
+async def generate_section_4(verdict: dict, legal_context: dict):
+    """
+    Stub for Section 4: Customer and Account Profile.
+    To be fully implemented later.
+    """
+    try:
+        yield _sse_event("section_start", "section_4")
+        
+        # Mock streaming response for UI testing
+        mock_text = "This is a placeholder for **Section 4 — Customer and Account Profile**. [[CITATION: Mock Data]]"
+        for word in mock_text.split(" "):
+            yield _sse_event("token", {
+                "section": "section_4",
+                "token": word + " "
+            })
+            import asyncio
+            await asyncio.sleep(0.05)
+            
+        yield _sse_event("section_done", {"section_id": "section_4"})
+    except Exception as e:
+        yield _sse_event("error", {"section": "section_4", "message": str(e)})
