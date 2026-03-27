@@ -255,6 +255,13 @@ The `generate_section_7()` generator specifically aggregates all `watchlist_hits
 - To maintain legal rigor, the generator specifically filters the `legal_context` to inject only `sanctions_specific` statutes. This guarantees the LLM strictly synthesizes post-table compliance notes regarding mandatory asset freezes (e.g., OFSI, HM Treasury) without hallucinating unrelated POCA offenses.
 - In the event of a negative screen (no watchlist hits identified), the prompt enforces a highly formal empty state declaration, averting confusing or overly verbose LLM responses.
 
+### Section 8: Statistical and Behavioural Analysis
+
+The `generate_section_8()` generator extracts the quantitative facts aggregated by the Python execution loop (such as transaction volumes and retention behaviors) and formats them into a strict GitHub-flavored Markdown matrix.
+- Leveraging the `SECTION_8_STATISTICS_PROMPT`, the LLM structures a standardized 2-column table: isolating the bare mathematical `Metric` on the left, and synthesizing the `Value & Context` (e.g., "confirms rapid structuring") on the right. 
+- The generator specifically targets data stored deep within the `investigation_summary` and `statistical_context` blocks of the `verdict_json`, stripping away generalized narrative logic in favor of pure, condensed analytics.
+- As always, the exact LLM payload is emitted via the `debug_token` streaming event to the "Agent Raw Reasoning" console, ensuring full explainability (XAI) across the entire generation pipeline.
+
 ---
 
 ## Conclusion

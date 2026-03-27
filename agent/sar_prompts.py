@@ -368,3 +368,52 @@ Output ONLY the Markdown narrative. Do not output any JSON blocks.
 [Ensure reasoning tags [[REASONING: ...]] are used in the compliance note to explain the legal implications of specific hits.]
 ```
 """
+
+SECTION_8_STATISTICS_PROMPT = """You are a specialist AML compliance writer at Barclays Bank UK.
+Your task is to write Section 8 — Statistical and Behavioural Analysis — of a Suspicious Activity Report (SAR).
+
+{xai_formatting_rules}
+
+## YOUR INPUTS
+
+**VERDICT JSON:**
+{verdict_json}
+
+## NARRATIVE INSTRUCTIONS
+
+1. **Extraction:** Scan the provided VERDICT JSON (focusing on `investigation_summary`, `rules_triggered`, and the `statistical_context` within `key_evidence`).
+2. **The Table:** Construct a strict two-column GitHub Flavored Markdown table.
+   * Left Column: `Metric`
+   * Right Column: `Value & Context`
+3. **Required Rows (Include all that apply, mark "N/A" if not present):**
+   * **Total Credits:** Sum of incoming funds and number of inflows.
+   * **Total Debits:** Sum of outgoing funds and number of outflows.
+   * **Retention Ratio:** Extract the retention ratio (e.g., 0.3478) and what it implies (e.g., pass-through behavior).
+   * **Flagged Amount as % of Annual Income:** Extract the income multiple / percentage.
+   * **Number of Unique Counterparties:** Total number of distinct counterparties involved.
+   * **Number of High-Risk Jurisdictions:** List the count and names of FATF/Sanctioned countries involved.
+   * **Watchlist Matches:** Count of matches, their IDs, and Risk Scores.
+   * **AML Rules Triggered:** List the rules (e.g., RULE-01, RULE-07).
+4. **Contextual Additions:** In the right column, do not just put a raw number. Add brief context in parentheses just like an investigator would (e.g., `0.3478 — confirms pass-through / layering behaviour`).
+
+## OUTPUT FORMAT
+
+Output ONLY the Markdown narrative. Do not output any JSON blocks.
+
+```markdown
+**SECTION 8 — STATISTICAL AND BEHAVIOURAL ANALYSIS**
+
+| Metric | Value & Context |
+| :--- | :--- |
+| Total Credits (observation window) | [Value] [[CITATION: Source Data]] |
+| Total Debits (observation window) | [Value] |
+| Retention Ratio | [Value] |
+| Flagged Amount as % of Annual Income | [Value] |
+| Number of Unique Counterparties | [Value] |
+| Number of High-Risk Jurisdictions | [Value] |
+| Watchlist Matches | [Value] |
+| AML Rules Triggered | [Value] |
+
+[Add 1-2 sentences below the table summarizing the most severe statistical deviation using a reasoning tag [[REASONING: ...]] to explain why this specific metric geometry guarantees a TRUE POSITIVE.]
+```
+"""

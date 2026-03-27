@@ -1,6 +1,6 @@
 import json
 from agent.llm import get_llm
-from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT, SECTION_5_CHRONOLOGY_PROMPT, SECTION_6_RULE_ANALYSIS_PROMPT, SECTION_6_STATUTORY_PROMPT, SECTION_7_WATCHLIST_PROMPT
+from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT, SECTION_5_CHRONOLOGY_PROMPT, SECTION_6_RULE_ANALYSIS_PROMPT, SECTION_6_STATUTORY_PROMPT, SECTION_7_WATCHLIST_PROMPT, SECTION_8_STATISTICS_PROMPT
 
 from typing import Any
 
@@ -296,5 +296,39 @@ async def generate_section_7(verdict: dict, legal_context: dict):
     except Exception as e:
         yield _sse_event("error", {
             "section": "section_7", 
+            "message": str(e)
+        })
+
+async def generate_section_8(verdict: dict, legal_context: dict = None):
+    """
+    Generates Section 8: Statistical and Behavioural Analysis.
+    """
+    try:
+        llm = get_llm()
+        
+        prompt = SECTION_8_STATISTICS_PROMPT.format(
+            xai_formatting_rules=XAI_FORMATTING_RULES,
+            verdict_json=json.dumps(verdict, indent=2)
+        )
+
+        yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 8 STATISTICS PROMPT ===\n{prompt}\n=========================================\n\n"})
+
+        yield _sse_event("section_start", "section_8")
+
+        accumulated_text = ""
+        for chunk in llm.stream(prompt):
+            text_chunk = _extract_text(getattr(chunk, "content", ""))
+            if text_chunk:
+                accumulated_text += text_chunk
+                yield _sse_event("token", {
+                    "section": "section_8",
+                    "token": text_chunk
+                })
+        
+        yield _sse_event("section_done", "section_8")
+
+    except Exception as e:
+        yield _sse_event("error", {
+            "section": "section_8", 
             "message": str(e)
         })
