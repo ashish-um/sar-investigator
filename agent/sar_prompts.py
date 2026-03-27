@@ -1,3 +1,29 @@
+XAI_FORMATTING_RULES = """
+# CORE FORMATTING RULES
+
+Your output will be rendered in a custom frontend environment that supports Explainable AI (XAI) tooltips and dynamic inline citations. You MUST strictly adhere to the following two syntax rules. Failure to do so will break the application's rendering engine.
+
+## 1. Legal and Data Citations (MANDATORY)
+Every factual claim, piece of evidence, date, transaction amount, or legal standard mentioned in your narrative MUST be cited inline immediately after the claim.
+* **Syntax:** `[[CITATION: <Source Name>]]`
+* **Crucial Constraint:** DO NOT use standard Markdown footnotes (e.g., `[^1]`) and DO NOT attempt to number the citations yourself. The frontend will automatically calculate the superscript numbers.
+* **Example (Correct):** "The funds were wired to Vanuatu. [[CITATION: SWIFT Log TR-88219]]"
+* **Example (Incorrect):** "The funds were wired to Vanuatu. [1]" or "The funds were wired to Vanuatu. [[CITATION: 1]]"
+
+## 2. Explainable AI Rationale Tags (MANDATORY)
+Regulators require a "Glass Box" AI approach. For EVERY analytical conclusion, calculation, risk assessment, or hypothesis confirmation you make, you must provide the underlying logic using an inline Reasoning Tag.
+* **Syntax:** `[[REASONING: <Your explanation>]]`
+* **Placement:** Place the tag immediately after the sentence it explains.
+* **Content:** State the rule triggered, the mathematical calculation performed, or the specific database row you analyzed.
+* **Example:** "The subject exhibited pass-through activity. [[REASONING: 85% of deposited funds were wired to an offshore entity within 12 hours of receipt, triggering RULE-09.]]"
+* **Crucial Constraint:** Do NOT use single brackets `[REASONING: ...]`, do NOT use parentheses `(REASONING: ...)`, and do NOT omit the exact word "REASONING:".
+
+## 3. General Markdown Style
+* Write in a highly objective, formal, and forensic tone (e.g., "The investigator notes", not "I noticed"). Never use first-person pronouns.
+* Use standard GitHub Flavored Markdown for headings (`##`), bolding (`**text**`), and tables.
+* If `daml_required` is TRUE in the provided context, you MUST explicitly state the "Required Act" (the pending transaction that requires regulator consent to proceed).
+"""
+
 SECTION_3_CODE_IDENTIFICATION_PROMPT = """You are an AML compliance specialist at Barclays Bank UK.
 Your task is to identify the correct NCA UKFIU Glossary Codes applicable 
 to a Suspicious Activity Report based on an investigation verdict.
@@ -92,6 +118,8 @@ Your task is to write Section 3 — Glossary Code Declaration and Basis of
 Suspicion — of a Suspicious Activity Report (SAR) for submission to the 
 UK National Crime Agency (UKFIU).
 
+{xai_formatting_rules}
+
 ## YOUR INPUTS
 
 ORIGINAL VERDICT JSON:
@@ -126,10 +154,8 @@ You must strictly align your narrative with these specific laws and thresholds:
 
 ## OUTPUT FORMAT
 
-Your response must have exactly two parts separated by a markdown 
-horizontal rule (---).
+Output ONLY the Markdown narrative. Do not output any JSON block.
 
-### PART 1 — Section 3 Markdown Narrative
 ```markdown
 **NCA GLOSSARY CODES APPLICABLE TO THIS REPORT:**
 
@@ -137,32 +163,12 @@ horizontal rule (---).
 
 [Opening paragraph: statutory basis — explicitly cite POCA 2002 s.330 and MLR 2017. State the suspicion threshold using the EXACT text provided in the "Applicable Case Law" section above. One short paragraph.]
 
-[Second paragraph: confirm suspicion is grounded in specific factual 
-evidence, not vague unease. Add Shah paragraph if MEDIUM confidence. 
-Add Anwoir paragraph if HIGH confidence.]
+[Second paragraph: confirm suspicion is grounded in specific factual evidence, not vague unease.]
 
-**The following glossary codes are declared in accordance with UKFIU 
-Glossary Codes and Reporting Routes guidance (March 2022):**
+**The following glossary codes are declared in accordance with UKFIU Glossary Codes and Reporting Routes guidance (March 2022):**
 
-- **XXCODEXX** — [Full code name]. [Full paragraph citing specific 
-  evidence from the verdict that triggered this code.]
+- **XXCODEXX** — [Full code name]. [Full paragraph citing specific evidence from the verdict that triggered this code.]
 
 - **XXCODEXX** — [Full code name]. [Full paragraph...]
 ```
-
-### PART 2 — Structured JSON block
-
-After the horizontal rule (---), output this fenced JSON block and 
-nothing after it:
-```json
-{{
-  "glossary_codes": {ordered_codes},
-  "codes_string": "{codes_string}",
-  "ctfi_required": {ctfi_required},
-  "daml_required": {daml_required}
-}}
-```
-
-No prose after the JSON block. The JSON block must be the absolute 
-last thing in your response.
 """

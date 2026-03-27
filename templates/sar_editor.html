@@ -5,12 +5,6 @@
 
     {% include 'components/header.html' %}
 
-    <style>
-        /* Hide the default markdown-it footnote block from the web view */
-        .footnotes, .footnotes-sep {
-            display: none !important;
-        }
-    </style>
 
     <!-- Main Content -->
     <main class="flex flex-1 overflow-hidden relative">
@@ -79,7 +73,6 @@
         // 1. Import markdown-it and DOMPurify via bundled ES Modules
         import markdownit from 'https://esm.sh/markdown-it@14?bundle';
         import DOMPurify from 'https://esm.sh/dompurify@3?bundle';
-        import markdownItFootnote from 'https://esm.sh/markdown-it-footnote@4?bundle';
 
         // 2. Initialize the parser with GitHub-like settings
         const md = markdownit({
@@ -88,7 +81,6 @@
             typographer: true, // Enable smartquotes and other typographic replacements
             breaks: true       // Convert '\n' in paragraphs into <br> (GitHub behavior)
         });
-        md.use(markdownItFootnote);
 
         // State Management
         let rawMarkdown = "";
@@ -103,9 +95,9 @@
 
         // 3. Update the render function to Parse -> Sanitize -> Inject
     // 1. Create reusable floating tooltip containers using Tailwind classes
-    const tooltip = document.createElement('div');
-    tooltip.className = 'absolute z-50 hidden max-w-sm p-4 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg shadow-xl pointer-events-none transition-opacity duration-200 opacity-0';
-    document.body.appendChild(tooltip);
+    const citationTooltip = document.createElement('div');
+    citationTooltip.className = 'absolute z-50 hidden w-64 p-3 text-xs text-left font-normal text-slate-800 bg-white border border-slate-200 rounded-lg shadow-2xl pointer-events-none transition-opacity duration-200 opacity-0 transform -translate-x-1/2';
+    document.body.appendChild(citationTooltip);
 
     const reasoningTooltip = document.createElement('div');
     reasoningTooltip.className = 'absolute z-50 hidden w-72 p-3 text-xs text-left font-normal text-purple-900 bg-purple-50 border border-purple-200 rounded-lg shadow-xl pointer-events-none transition-opacity duration-200 opacity-0 transform -translate-x-1/2';
@@ -125,57 +117,54 @@
         if (isPreviewMode) {
             let processedMarkdown = rawMarkdown;
 
-            // XAI Engine: Process [REASONING: ...] tags
+            // 1. Process [[CITATION: ...]] tags
+            // Upgraded to Double Brackets to safely ignore internal legal brackets like [2006]
+            let citationCount = 1;
+            const citationRegex = /\[\[CITATION:\s*([\s\S]*?)\]\]/g;
+            processedMarkdown = processedMarkdown.replace(citationRegex, (match, source) => {
+                const currentNum = citationCount++;
+                const cleanSource = source.replace(/"/g, '&quot;');
+                return `<sup class="citation-ref cursor-help ml-0.5 text-blue-600 font-bold text-xs" data-source="${cleanSource}">[${currentNum}]</sup>`;
+            });
+
+            // 2. Process [[REASONING: ...]] tags (Only if Inspector Mode is ON)
             if (isInspectorMode) {
-                const reasoningRegex = /\[REASONING:\s*(.*?)\]/g;
+                const reasoningRegex = /\[\[REASONING:\s*([\s\S]*?)\]\]/g;
                 processedMarkdown = processedMarkdown.replace(reasoningRegex, (match, rationale) => {
                     const cleanRationale = rationale.replace(/"/g, '&quot;');
                     return `<span class="reasoning-ref cursor-help inline-flex items-center justify-center ml-1 w-5 h-5 bg-purple-100 rounded-full hover:bg-purple-200 transition-colors" data-rationale="${cleanRationale}"><span class="text-xs text-purple-700">✨</span></span>`;
                 });
             } else {
-                processedMarkdown = processedMarkdown.replace(/\[REASONING:\s*(.*?)\]/g, '');
+                processedMarkdown = processedMarkdown.replace(/\[\[REASONING:\s*([\s\S]*?)\]\]/g, '');
             }
 
             // Parse the processed markdown and sanitize
             const dirtyHtml = md.render(processedMarkdown);
             const cleanHtml = DOMPurify.sanitize(dirtyHtml, {
-                ADD_TAGS: ['span', 'strong', 'div'],
-                ADD_ATTR: ['class', 'data-rationale']
+                ADD_TAGS: ['span', 'strong', 'div', 'sup'],
+                ADD_ATTR: ['class', 'data-rationale', 'data-source']
             });
             viewPreview.innerHTML = cleanHtml;
             
-            // B. Attach Hover Logic to all footnote references
-            const refs = viewPreview.querySelectorAll('.footnote-ref a');
-            refs.forEach(ref => {
-                const targetId = ref.getAttribute('href').substring(1); // e.g., "fn1"
-                const footnoteLi = document.getElementById(targetId);
-                
-                if (footnoteLi) {
-                    // Extract the text, but remove the "↩" return link since it's a popup
-                    const content = footnoteLi.cloneNode(true);
-                    const backref = content.querySelector('.footnote-backref');
-                    if (backref) backref.remove();
+            // B. Attach Hover Logic to all citation references
+            const citationRefs = viewPreview.querySelectorAll('.citation-ref');
+            citationRefs.forEach(ref => {
+                ref.addEventListener('mouseenter', (e) => {
+                    const source = ref.getAttribute('data-source');
+                    citationTooltip.innerHTML = `<strong class="block mb-1 text-slate-400 uppercase tracking-wider text-[10px]">Reference</strong>${source}<div class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-slate-200"></div>`;
+                    citationTooltip.classList.remove('hidden');
+                    
+                    const rect = ref.getBoundingClientRect();
+                    citationTooltip.style.left = `${rect.left + window.scrollX + (rect.width / 2)}px`;
+                    citationTooltip.style.top = `${rect.top + window.scrollY - citationTooltip.offsetHeight - 8}px`;
+                    
+                    setTimeout(() => citationTooltip.classList.remove('opacity-0'), 10);
+                });
 
-                    // Show tooltip on hover
-                    ref.addEventListener('mouseenter', (e) => {
-                        tooltip.innerHTML = content.innerHTML;
-                        tooltip.classList.remove('hidden');
-                        
-                        // Small timeout to trigger CSS fade-in
-                        setTimeout(() => tooltip.classList.remove('opacity-0'), 10);
-                        
-                        // Position the tooltip directly below the superscript
-                        const rect = ref.getBoundingClientRect();
-                        tooltip.style.left = `${rect.left + window.scrollX}px`;
-                        tooltip.style.top = `${rect.bottom + window.scrollY + 8}px`;
-                    });
-
-                    // Hide tooltip on mouse exit
-                    ref.addEventListener('mouseleave', () => {
-                        tooltip.classList.add('opacity-0');
-                        setTimeout(() => tooltip.classList.add('hidden'), 200); // Wait for fade out
-                    });
-                }
+                ref.addEventListener('mouseleave', () => {
+                    citationTooltip.classList.add('opacity-0');
+                    setTimeout(() => citationTooltip.classList.add('hidden'), 200);
+                });
             });
 
             // C. Attach Hover Logic to all reasoning references

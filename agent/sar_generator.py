@@ -1,6 +1,6 @@
 import json
 from agent.llm import get_llm
-from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT
+from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES
 
 from typing import Any
 
@@ -59,6 +59,7 @@ async def generate_section_3(verdict: dict, legal_context: dict):
 
         # Step 2: Narrative Generation
         prompt2 = SECTION_3_NARRATIVE_PROMPT.format(
+            xai_formatting_rules=XAI_FORMATTING_RULES,
             verdict_json=json.dumps(verdict, indent=2),
             code_identification_json=json.dumps(code_identification, indent=2),
             codes_string=code_identification.get("codes_string", ""),
