@@ -262,6 +262,13 @@ The `generate_section_8()` generator extracts the quantitative facts aggregated 
 - The generator specifically targets data stored deep within the `investigation_summary` and `statistical_context` blocks of the `verdict_json`, stripping away generalized narrative logic in favor of pure, condensed analytics.
 - As always, the exact LLM payload is emitted via the `debug_token` streaming event to the "Agent Raw Reasoning" console, ensuring full explainability (XAI) across the entire generation pipeline.
 
+### Section 9: Innocent Explanations Considered and Assessed
+
+The `generate_section_9()` generator iterates over the `false_positive_hypotheses_considered` array from the `verdict_json` to formally dismiss alternative legitimate commercial explanations.
+- Utilizing `SECTION_9_HYPOTHESIS_PROMPT`, the LLM systematically evaluates each hypothesis, generating comprehensive forensic rejections utilizing the identical analytical logic applied by the python pipeline.
+- The prompt enforces strict JMLSG Part I and FCA Financial Crime Guide boilerplate at the onset, and dynamically injects the `caselaw` parameter (e.g., *R v Da Silva*) into the conclusive statement. This structure firmly demonstrates to regulators that the institution satisfied the requisite suspicion thresholds prior to filing.
+- As with previous components, the raw textual prompt is routed back to the client interface for live XAI observability.
+
 ---
 
 ## Conclusion

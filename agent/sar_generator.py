@@ -1,6 +1,6 @@
 import json
 from agent.llm import get_llm
-from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT, SECTION_5_CHRONOLOGY_PROMPT, SECTION_6_RULE_ANALYSIS_PROMPT, SECTION_6_STATUTORY_PROMPT, SECTION_7_WATCHLIST_PROMPT, SECTION_8_STATISTICS_PROMPT
+from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT, SECTION_5_CHRONOLOGY_PROMPT, SECTION_6_RULE_ANALYSIS_PROMPT, SECTION_6_STATUTORY_PROMPT, SECTION_7_WATCHLIST_PROMPT, SECTION_8_STATISTICS_PROMPT, SECTION_9_HYPOTHESIS_PROMPT
 
 from typing import Any
 
@@ -330,5 +330,40 @@ async def generate_section_8(verdict: dict, legal_context: dict = None):
     except Exception as e:
         yield _sse_event("error", {
             "section": "section_8", 
+            "message": str(e)
+        })
+
+async def generate_section_9(verdict: dict, legal_context: dict):
+    """
+    Generates Section 9: Innocent Explanations Considered and Assessed.
+    """
+    try:
+        llm = get_llm()
+        
+        prompt = SECTION_9_HYPOTHESIS_PROMPT.format(
+            xai_formatting_rules=XAI_FORMATTING_RULES,
+            verdict_json=json.dumps(verdict, indent=2),
+            caselaw=legal_context.get("caselaw", "R v Da Silva [2006] EWCA Crim 1654")
+        )
+
+        yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 9 HYPOTHESIS PROMPT ===\n{prompt}\n=========================================\n\n"})
+
+        yield _sse_event("section_start", "section_9")
+
+        accumulated_text = ""
+        for chunk in llm.stream(prompt):
+            text_chunk = _extract_text(getattr(chunk, "content", ""))
+            if text_chunk:
+                accumulated_text += text_chunk
+                yield _sse_event("token", {
+                    "section": "section_9",
+                    "token": text_chunk
+                })
+        
+        yield _sse_event("section_done", "section_9")
+
+    except Exception as e:
+        yield _sse_event("error", {
+            "section": "section_9", 
             "message": str(e)
         })

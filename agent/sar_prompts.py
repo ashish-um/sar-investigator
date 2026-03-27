@@ -417,3 +417,44 @@ Output ONLY the Markdown narrative. Do not output any JSON blocks.
 [Add 1-2 sentences below the table summarizing the most severe statistical deviation using a reasoning tag [[REASONING: ...]] to explain why this specific metric geometry guarantees a TRUE POSITIVE.]
 ```
 """
+
+SECTION_9_HYPOTHESIS_PROMPT = """You are a specialist AML compliance writer at Barclays Bank UK.
+Your task is to write Section 9 — Innocent Explanations Considered and Assessed — of a Suspicious Activity Report (SAR).
+
+{xai_formatting_rules}
+
+## YOUR INPUTS
+
+**VERDICT JSON:**
+{verdict_json}
+
+**CASE LAW (Suspicion Threshold):** {caselaw}
+
+## NARRATIVE INSTRUCTIONS
+
+1. **Standard Introduction:** Begin the section with exactly this paragraph:
+   "In accordance with the FCA Financial Crime Guide and JMLSG Guidance Part I, the reporting officer has given active consideration to whether the transaction activity may have an innocent commercial explanation, prior to concluding that suspicion is warranted. The following hypotheses were evaluated:"
+2. **Hypothesis Evaluation:** Extract the items from the `false_positive_hypotheses_considered` array in the JSON. For each item, format it clearly:
+   * **Hypothesis:** State the theoretical legitimate explanation.
+   * **Assessment:** State the assessment status (e.g., REJECTED) in bold.
+   * **Reasoning:** Expand the provided `reason` into a formal, forensic paragraph explaining exactly why the evidence renders the innocent explanation implausible.
+3. **Statutory Conclusion:** Conclude the section by stating that because no plausible innocent explanation exists, the reporting officer is satisfied that the suspicion threshold is met. You MUST cite the specific case law standard provided in the `CASE LAW` input above.
+
+## OUTPUT FORMAT
+
+Output ONLY the Markdown narrative. Do not output any JSON blocks. Ensure you use the strict `[[CITATION: ...]]` and `[[REASONING: ...]]` syntax.
+
+```markdown
+**SECTION 9 — INNOCENT EXPLANATIONS CONSIDERED AND ASSESSED**
+
+[Standard Introduction]
+
+**Hypothesis:** [The hypothesis]
+**Assessment:** **[Status]**
+[Detailed forensic paragraph explaining why it was rejected, using reasoning tags [[REASONING: ...]] to map the logic to the evidence.]
+
+*(Repeat for additional hypotheses if present)*
+
+[Statutory Conclusion Paragraph citing the specific case law threshold] [[CITATION: Relevant Case Law]]
+```
+"""
