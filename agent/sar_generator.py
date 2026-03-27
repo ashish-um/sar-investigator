@@ -1,6 +1,9 @@
 import json
+import datetime
+import asyncio
 from agent.llm import get_llm
-from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT, SECTION_5_CHRONOLOGY_PROMPT, SECTION_6_RULE_ANALYSIS_PROMPT, SECTION_6_STATUTORY_PROMPT, SECTION_7_WATCHLIST_PROMPT, SECTION_8_STATISTICS_PROMPT, SECTION_9_HYPOTHESIS_PROMPT, SECTION_10_HISTORY_PROMPT, SECTION_11_DAML_PROMPT
+from tools.internal.get_customer_profile import get_customer_profile
+from agent.sar_prompts import SECTION_1_TEMPLATE, SECTION_2_TEMPLATE, SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT, SECTION_5_CHRONOLOGY_PROMPT, SECTION_6_RULE_ANALYSIS_PROMPT, SECTION_6_STATUTORY_PROMPT, SECTION_7_WATCHLIST_PROMPT, SECTION_8_STATISTICS_PROMPT, SECTION_9_HYPOTHESIS_PROMPT, SECTION_10_HISTORY_PROMPT, SECTION_11_DAML_PROMPT
 
 from typing import Any
 
@@ -401,3 +404,83 @@ async def generate_section_11(verdict: dict, legal_context: dict = None):
         yield _sse_event("section_done", "section_11")
     except Exception as e:
         yield _sse_event("error", {"section": "section_11", "message": str(e)})
+
+async def generate_section_1(verdict: dict, legal_context: dict = None):
+    """Deterministically generates Section 1 using pure Python formatting."""
+    try:
+        yield _sse_event("section_start", "section_1")
+        
+        daml_req = "Yes" if verdict.get("daml_required") else "No"
+        prior_sar = "None on record" if verdict.get("duplicate_sar_safe") else "Prior SAR exists - see internal records"
+        
+        markdown_text = SECTION_1_TEMPLATE.format(
+            sar_reference=f"SAR-{datetime.datetime.now().strftime('%Y-%m')}-{verdict.get('customer_id', 'UNKNOWN')[-6:]}",
+            date_of_report=datetime.datetime.now().strftime("%d %B %Y"),
+            total_value="See Section 8",
+            daml_required=daml_req,
+            prior_sar=prior_sar
+        )
+
+        # Yield in chunks to simulate streaming for the UI
+        for word in markdown_text.split(" "):
+            yield _sse_event("token", {"section": "section_1", "token": word + " "})
+            await asyncio.sleep(0.01) # Tiny sleep to let the frontend breathe
+            
+        yield _sse_event("section_done", "section_1")
+    except Exception as e:
+        yield _sse_event("error", {"section": "section_1", "message": str(e)})
+
+async def generate_section_2(verdict: dict, legal_context: dict = None):
+    """Deterministically generates Section 2 using pure Python formatting and the customer profile tool."""
+    try:
+        yield _sse_event("section_start", "section_2")
+        
+        customer_id = verdict.get("customer_id", "UNKNOWN")
+        
+        # 1. Fetch the profile data dynamically using the tool
+        profile = {}
+        if customer_id != "UNKNOWN":
+            try:
+                # Assuming the tool returns a JSON string, parse it into a dict
+                profile_raw = get_customer_profile.invoke({"customer_id": customer_id})
+                profile = json.loads(profile_raw) if isinstance(profile_raw, str) else profile_raw
+            except Exception as e:
+                print(f"Error fetching customer profile: {e}")
+
+        # 2. Extract Account Number from the verdict's key_evidence
+        accounts_involved = set()
+        for evidence in verdict.get("key_evidence", []):
+            for acc in evidence.get("supporting_data", {}).get("accounts_involved", []):
+                accounts_involved.add(acc)
+        account_number = ", ".join(accounts_involved) if accounts_involved else "UNKNOWN"
+
+        # 3. Safely map the specific tool output fields
+        occupation_str = f"{profile.get('occupation', 'UNKNOWN')} / {profile.get('employer_name', 'UNKNOWN')}"
+        income_val = profile.get("annual_income_declared_gbp", "UNKNOWN")
+        income_str = f"£{income_val:,.2f} (Source: {profile.get('source_of_funds_declared', 'UNKNOWN')})" if isinstance(income_val, (int, float)) else str(income_val)
+
+        markdown_text = SECTION_2_TEMPLATE.format(
+            full_name=profile.get("full_name", "UNKNOWN"),
+            customer_id=customer_id,
+            dob=profile.get("date_of_birth", "UNKNOWN"),
+            nationality=profile.get("nationality", "UNKNOWN"),
+            residence=profile.get("country_of_residence", "UNKNOWN"),
+            occupation=occupation_str,
+            income=income_str,
+            onboarding_date=profile.get("onboarding_date", "UNKNOWN"),
+            kyc_status=profile.get("kyc_status", "UNKNOWN"),
+            risk_rating=profile.get("risk_rating", "UNKNOWN"),
+            pep_flag="True" if profile.get("pep_flag") == 1 else "False",
+            sanctions_flag="True" if profile.get("sanctions_flag") == 1 else "False",
+            account_number=account_number,
+            account_type="Personal Current Account" # Default or fetch from get_account_summary if needed
+        )
+
+        # Yield in chunks
+        for word in markdown_text.split(" "):
+            yield _sse_event("token", {"section": "section_2", "token": word + " "})
+            await asyncio.sleep(0.01)
+            
+        yield _sse_event("section_done", "section_2")
+    except Exception as e:
+        yield _sse_event("error", {"section": "section_2", "message": str(e)})

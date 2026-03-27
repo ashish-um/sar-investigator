@@ -20,7 +20,7 @@ from schemas.alert import AlertPayload
 from agent.prompts import build_system_prompt
 from agent.graph import graph, drain_rate_limit_events, clear_rate_limit_events
 from agent.llm import get_llm_config
-from agent.sar_generator import generate_section_3, generate_section_4, generate_section_5, generate_section_6, generate_section_7, generate_section_8, generate_section_9, generate_section_10, generate_section_11
+from agent.sar_generator import generate_section_1, generate_section_2, generate_section_3, generate_section_4, generate_section_5, generate_section_6, generate_section_7, generate_section_8, generate_section_9, generate_section_10, generate_section_11
 from agent.legal_context_builder import build_legal_context
 
 import logging
@@ -269,7 +269,11 @@ async def generate_specific_section(section_id: str, request: Request):
     legal_context = build_legal_context(verdict)
     
     # 2. Route to the correct section generator
-    if section_id == "section_3":
+    if section_id == "section_1":
+        generator = generate_section_1(verdict, legal_context)
+    elif section_id == "section_2":
+        generator = generate_section_2(verdict, legal_context)
+    elif section_id == "section_3":
         generator = generate_section_3(verdict, legal_context)
     elif section_id == "section_4":
         generator = generate_section_4(verdict, legal_context)

@@ -518,3 +518,40 @@ Output ONLY the Markdown narrative. Use `[[CITATION: ...]]` for the POCA statute
 [Your narrative based on the boolean condition...]
 ```
 """
+
+SECTION_1_TEMPLATE = """**SECTION 1 — FILING PARTICULARS**
+
+| Field | Details |
+| :--- | :--- |
+| SAR Reference Number | {sar_reference} |
+| NCA Glossary Codes | [INSERT BEFORE FILING] |
+| Reporting Institution | Barclays Bank UK PLC |
+| Registered Address | 1 Churchill Place, London E14 5HP, United Kingdom |
+| FCA Firm Reference No. | 122702 |
+| MLRO Name | [INSERT BEFORE FILING] |
+| Date of Report | {date_of_report} |
+| Total Value of Suspicious Activity | {total_value} |
+| DAML Required? | {daml_required} |
+| Prior SAR Reference | {prior_sar} |
+| Reporting Route | SAR Online — NCA UKFIU Portal |
+"""
+
+SECTION_2_TEMPLATE = """**SECTION 2 — SUBJECT IDENTIFICATION**
+
+| Field | Details |
+| :--- | :--- |
+| Full Name | {full_name} [[CITATION: KYC Database]] |
+| Customer ID | {customer_id} |
+| Date of Birth | {dob} |
+| Nationality | {nationality} |
+| Country of Residence | {residence} |
+| Occupation / Employer | {occupation} |
+| Declared Annual Income | {income} |
+| Onboarding Date | {onboarding_date} |
+| KYC Status | {kyc_status} |
+| Risk Rating | {risk_rating} |
+| PEP Flag | {pep_flag} |
+| Sanctions Flag | {sanctions_flag} |
+| Account Number | {account_number} |
+| Account Type | {account_type} |
+"""

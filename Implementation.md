@@ -221,6 +221,15 @@ While the Investigator Agent produces the initial logic (the JSON Verdict), tran
 
 The system operates as an **Interactive Co-Pilot**, granting users component-level control without forcing them into a monolithic "Black Box" generation delay. Analysts can trigger selective generation of individual components seamlessly via the Generation Control right-hand panel, mapping to independent async generators like `generate_section_3()` or `generate_section_4()`.
 
+### Sections 1 and 2: Deterministic Administrative Data
+
+Unlike the narrative sections of the SAR, **Section 1 (Filing Particulars)** and **Section 2 (Subject Identification)** contain highly sensitive, strict administrative data elements (e.g., Account Numbers, Date of Birth, Nationalities, NCA Glossary Codes). To absolutely eliminate the risk of LLM hallucination on these critical fields, the `generate_section_1()` and `generate_section_2()` engines are purely deterministic.
+- They utilize Python string formatting against `SECTION_1_TEMPLATE` and `SECTION_2_TEMPLATE`.
+- They dynamically invoke backend tools, such as `get_customer_profile.invoke()`, to retrieve specific CRM data missing from the core investigation verdict.
+- To maintain a seamless UI experience, they split the resulting string by word and stream it back via an `asyncio.sleep(0.01)` token simulation loop. This perfectly mimics the generative visual behavior of the LLM sections without triggering rendering layout shifts.
+
+### Section 3: Glossary Code Declaration
+
 The `generate_section_3()` orchestrator located in `agent/sar_generator.py` relies on a highly efficient **Two-Call Pipeline**:
 
 1. **Step 1: Code Identification (Reasoning Phase):** The LLM applies statistical mapping logic against the `verdict_json` using an embedded `NCA UKFIU Matrix`. Using `llm.stream()`, this initial JSON structural formulation is beamed actively to the UI's "Agent Raw Reasoning" console via `debug_token` SSE events, granting complete transparency as the system justifies *why* specific codes like `XXHRCXX` or `XXTBMLXX` were selected. Once this stream stops, the string buffer is parsed strictly by Python into a `code_identification` dictionary payload.
