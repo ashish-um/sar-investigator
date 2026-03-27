@@ -260,3 +260,67 @@ Output ONLY the Markdown narrative. Do not output any JSON blocks.
 [Ensure all reasoning tags [[REASONING: ...]] are placed inline where appropriate within your synthesis paragraphs to explain your logic.]
 ```
 """
+
+SECTION_6_RULE_ANALYSIS_PROMPT = """You are a specialist AML compliance writer at Barclays Bank UK.
+Your task is to write ONE specific subsection of Section 6 (Regulatory Basis and Legal Analysis) for a Suspicious Activity Report.
+
+{xai_formatting_rules}
+
+## YOUR INPUTS
+
+**SUBSECTION HEADING:** {subsection_heading}
+**SPECIFIC RULE EVIDENCE:** {rule_evidence_json}
+
+**AVAILABLE LEGAL CONTEXT (Rule Specific & Sanctions):**
+{legal_context_laws}
+
+## NARRATIVE INSTRUCTIONS
+1. **The Heading:** Start your response with an H3 Markdown heading using the provided subsection heading (e.g., `### 6.1 Rule 07 — Sanctions Proximity`).
+2. **The Facts:** Summarize the specific finding and supporting data from the provided Rule Evidence JSON. 
+3. **The Law:** Explicitly quote/cite the relevant legal statutes (from the Available Legal Context) that this specific activity breaches. 
+4. **The Synthesis:** Explain exactly *how* the facts violate the cited law. Use the `statistical_context` and `regulatory_significance` fields from the evidence to ground your argument.
+5. **Formatting:** Use the required `[[CITATION: ...]]` and `[[REASONING: ...]]` syntax.
+
+## OUTPUT FORMAT
+Output ONLY the Markdown narrative for this specific subsection. Do not output JSON. Do not write an introduction to Section 6.
+"""
+
+SECTION_6_STATUTORY_PROMPT = """You are a specialist AML compliance writer at Barclays Bank UK.
+Your task is to write the final concluding subsection of Section 6: Statutory Reporting Obligation.
+
+{xai_formatting_rules}
+
+## YOUR INPUTS
+
+**SUBSECTION NUMBER:** {subsection_number}
+**ALWAYS APPLICABLE LAW:** {always_present}
+**CASE LAW (Suspicion Threshold):** {caselaw}
+**DAML REQUIRED:** {daml_required}
+
+## NARRATIVE INSTRUCTIONS
+
+Your goal is to write a highly formal, forensic legal conclusion mapping the bank's statutory duty to the specific case law threshold.
+
+1. **The Heading:** Start your response with an H3 Markdown heading: `### {subsection_number} Statutory Reporting Obligation`.
+2. **The Statutory Duty:** Explicitly cite the reporting duty under POCA 2002 s.330. State clearly that a person in the regulated sector who knows or suspects — or has reasonable grounds for knowing or suspecting — that another is engaged in money laundering must, as soon as practicable, disclose it to the National Crime Agency.
+3. **The Legal Threshold:** Introduce the legal threshold applied in this report using the exact text provided in the `CASE LAW` input above.
+4. **The Application (Mandatory Phrasing):** You MUST state that the reporting officer is satisfied that this threshold is met. You MUST use the following exact phrase: "the suspicion is firmly grounded in and targeted upon the specific financial evidence documented herein, in accordance with the standard endorsed by the Court of Appeal."
+5. **The Exclusion (Mandatory Phrasing):** You MUST explicitly include this sentence to satisfy the Da Silva baseline: "A vague feeling of unease was expressly excluded as the basis for this report."
+6. **DAML Conditional:** If `DAML REQUIRED` is True, you MUST add a final paragraph explicitly stating that a Defence Against Money Laundering (Appropriate Consent) is requested under POCA 2002 s.335 before the institution can proceed with the prohibited act.
+
+## OUTPUT FORMAT
+
+Output ONLY the Markdown narrative for this specific subsection. Ensure case law and statutes are cited inline using our strict `[[CITATION: ...]]` syntax.
+
+```markdown
+### {subsection_number} Statutory Reporting Obligation
+
+Under s.330 of POCA 2002, a person in the regulated sector... [[CITATION: POCA 2002 s.330]]
+
+The suspicion threshold applied in this report is... [[CITATION: Relevant Case Law]]
+
+The reporting officer is satisfied that... A vague feeling of unease was expressly excluded...
+
+[Conditional DAML Paragraph if required] [[CITATION: POCA 2002 s.335]]
+```
+"""

@@ -241,6 +241,13 @@ The `generate_section_5()` generator sequences the raw transaction arrays found 
 - The generator concludes by synthesizing the timeline, explicitly calculating the "Velocity" of the funds and naming the money laundering "Typology" (e.g., structuring, layering) matched against the regulatory significance defined in the verdict.
 - Just like Section 4, the full context prompt is yielded to the "Agent Raw Reasoning" console prior to streaming the generated response back to the GUI.
 
+### Section 6: Regulatory Basis and Legal Analysis
+
+The `generate_section_6()` generator implements a novel **Looping Generation Architecture** to ensure absolute legal precision when mapping facts to statutes.
+- Instead of relying on a single monolithic prompt, the generator iterates through each triggered AML rule in the `verdict_json`, making targeted LLM calls using the `SECTION_6_RULE_ANALYSIS_PROMPT`. This strictly bounds the LLM's attention to the specific `key_evidence` block, preventing narrative hallucination across separate suspicious activities.
+- After all rules are processed, a final LLM stream is initiated using the `SECTION_6_STATUTORY_PROMPT`. This concluding call dynamically injects the `always_present` legal duties (e.g., POCA 2002 s.330) and the specific Case Law thresholds (e.g., *Da Silva*), enforcing strict forensic boilerplate (e.g., "A vague feeling of unease was expressly excluded"). It also conditionally dictates DAML (Appropriate Consent) requirements.
+- As with prior sections, all intermediate LLM prompts utilized in the loop are piped to the "Agent Raw Reasoning" console via `debug_token` events for full XAI observability.
+
 ---
 
 ## Conclusion

@@ -22,7 +22,7 @@
                 </button>
 
                 <!-- Agent Raw Reasoning (Debug) -->
-                <details class="group bg-slate-50 border border-slate-200 rounded text-xs mt-2">
+                <details open class="group bg-slate-50 border border-slate-200 rounded text-xs mt-2">
                     <summary class="font-semibold text-slate-600 p-3 cursor-pointer select-none hover:bg-slate-100 uppercase tracking-wide list-none flex justify-between items-center">
                         <span>Agent Raw Reasoning (Debug)</span>
                         <span class="text-xs transition-transform group-open:rotate-180">▼</span>
@@ -103,6 +103,17 @@
                 <span class="text-xs text-slate-500">Chronological Description of Suspicious Activity</span>
                 <button onclick="triggerSectionGeneration('section_5')" class="mt-2 w-full bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm py-1 rounded transition-colors">
                     Generate Section 5
+                </button>
+            </div>
+
+            <div class="border rounded p-3 shadow-sm bg-slate-50 flex flex-col gap-2">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-sm text-slate-700">Section 6</span>
+                    <span id="status-section_6" class="text-xs px-2 py-1 bg-slate-200 rounded text-slate-600">Pending</span>
+                </div>
+                <span class="text-xs text-slate-500">Regulatory Basis and Legal Analysis</span>
+                <button onclick="triggerSectionGeneration('section_6')" class="mt-2 w-full bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm py-1 rounded transition-colors">
+                    Generate Section 6
                 </button>
             </div>
         </div>

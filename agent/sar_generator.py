@@ -1,6 +1,6 @@
 import json
 from agent.llm import get_llm
-from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT, SECTION_5_CHRONOLOGY_PROMPT
+from agent.sar_prompts import SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT, SECTION_5_CHRONOLOGY_PROMPT, SECTION_6_RULE_ANALYSIS_PROMPT, SECTION_6_STATUTORY_PROMPT
 
 from typing import Any
 
@@ -191,3 +191,74 @@ async def generate_section_5(verdict: dict, legal_context: dict = None):
             "section": "section_5", 
             "message": str(e)
         })
+
+async def generate_section_6(verdict: dict, legal_context: dict):
+    """
+    Generates Section 6 using a looping architecture to ensure legal precision.
+    """
+    try:
+        llm = get_llm()
+        yield _sse_event("section_start", "section_6")
+        
+        # Output the main Section Header first
+        yield _sse_event("token", {"section": "section_6", "token": "**SECTION 6 — REGULATORY BASIS AND LEGAL ANALYSIS**\n\n"})
+
+        triggered_rules = verdict.get("rules_triggered", [])
+        key_evidence = verdict.get("key_evidence", [])
+        
+        # Combine rule-specific laws and sanctions laws for the LLM to select from
+        available_laws = legal_context.get("rule_specific", []) + legal_context.get("sanctions_specific", [])
+        laws_string = "\n- ".join(available_laws)
+
+        subsection_index = 1
+
+        # --- LOOP 1: Analyze Each Triggered Rule ---
+        for rule_id in triggered_rules:
+            # Find the specific evidence block for this rule
+            evidence_block = next((e for e in key_evidence if e.get("rule_mapped") == rule_id), None)
+            if not evidence_block:
+                continue
+
+            heading = f"6.{subsection_index} {rule_id} Analysis"
+            
+            prompt = SECTION_6_RULE_ANALYSIS_PROMPT.format(
+                xai_formatting_rules=XAI_FORMATTING_RULES,
+                subsection_heading=heading,
+                rule_evidence_json=json.dumps(evidence_block, indent=2),
+                legal_context_laws=laws_string
+            )
+
+            # Surface prompt to Agent Raw Reasoning
+            yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 6 {rule_id} ANALYSIS PROMPT ===\n{prompt}\n=========================================\n\n"})
+
+            for chunk in llm.stream(prompt):
+                text_chunk = _extract_text(getattr(chunk, "content", ""))
+                if text_chunk:
+                    yield _sse_event("token", {"section": "section_6", "token": text_chunk})
+            
+            # Add spacing between subsections
+            yield _sse_event("token", {"section": "section_6", "token": "\n\n"})
+            subsection_index += 1
+
+        # --- FINAL CALL: Statutory Reporting Obligation ---
+        statutory_heading_num = f"6.{subsection_index}"
+        statutory_prompt = SECTION_6_STATUTORY_PROMPT.format(
+            xai_formatting_rules=XAI_FORMATTING_RULES,
+            subsection_number=statutory_heading_num,
+            always_present="\n- ".join(legal_context.get("always_present", [])),
+            caselaw=legal_context.get("caselaw", ""),
+            daml_required=str(legal_context.get("daml_required", False)).upper()
+        )
+
+        # Surface statutory prompt to Agent Raw Reasoning
+        yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 6 STATUTORY PROMPT ===\n{statutory_prompt}\n=========================================\n\n"})
+
+        for chunk in llm.stream(statutory_prompt):
+            text_chunk = _extract_text(getattr(chunk, "content", ""))
+            if text_chunk:
+                yield _sse_event("token", {"section": "section_6", "token": text_chunk})
+
+        yield _sse_event("section_done", "section_6")
+
+    except Exception as e:
+        yield _sse_event("error", {"section": "section_6", "message": str(e)})
