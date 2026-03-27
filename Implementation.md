@@ -73,16 +73,17 @@ The system has two entry points that both orchestrate the same underlying graph:
    - `POST /investigate`: Accepts the `AlertPayload` as a JSON body and streams the investigation.
    - `GET /api/alerts`: Scans the `tests/sample_alerts/` directory and returns all available True Positive and False Positive alert JSON payloads.
    - `GET /`: Serves a Jinja2-rendered `index.html` frontend dashboard. Users can dynamically select internal alerts and stream the investigation natively.
-   - `GET /sar-editor`: Serves the `sar_editor.html` mockup screen for automated document generation.
-   - `GET /generate-sar-mock`: An async generator endpoint that simulates the streaming of a generated Word-document-style SAR using Server-Sent Events.
+   - `GET /sar-editor`: Serves the `sar_editor.html` screen for automated document generation.
+   - `POST /generate-sar`: A highly optimized async generator endpoint that drives the real LLM document generation using a dual-call pipeline, streaming results back via Server-Sent Events.
 
 **UI Design Decisions:**
 The web dashboard operates entirely on **Tailwind CSS** delivered via CDN, conforming to a minimalistic **Google Material** white theme (using Roboto and high-contrast styling). 
 - **Space Management**: Database response payloads can be thousands of lines long. To prevent the LLM's valuable reasoning text from being pushed off-screen, all `tool_result` blocks are inserted as HTML5 `<details>` elements that are collapsed by default. Clicking them calculates their expanded height and triggers native scrolling.
 - **Investigation Flight-Recorder**: An internal JavaScript string silently compiles the entire investigation (thoughts, tool paths, exact parsed payloads, and verdicts). A final "Copy Full Investigation Log" button extracts this to the clipboard, saving analysts from manually highlighting massive browser DOM blocks. For perfect reproducibility, the `/investigate` SSE backend explicitly streams a `system_prompt` event block to the frontend, which is automatically prepended to the flight-recorder buffer guaranteeing that analysts export the exact dynamic rule constraints used on that specific run.
 - **Transparent LLM Identity**: Just like the CLI runner, the UI dashboard injects the exact LLM configuration from the environment and explicitly badges the active Provider and Model at the top of the interface so analysts always know who is generating the SAR.
-- **SAR Editor Handoff**: For `TRUE_POSITIVE` verdicts, the UI seamlessly injects a "Proceed to SAR Generation" action. By serializing the structured JSON verdict into `sessionStorage`, we enable a stateless handoff to the `/sar-editor` route, which features a two-panel side-by-side layout (verdict input vs. mock rich-text document generation via SSE).
-- **SAR Document Rendering**: The SAR Editor utilizes a robust Dual-View Markdown system. A raw `textarea` captures the document structure while a live preview pane renders it using `markdown-it` configured for GitHub Flavored Markdown (GFM) in Light Mode. To prevent XSS vulnerabilities from the LLM stream, all rendered HTML is rigorously sanitized via `DOMPurify` before entering the DOM. The UI cleanly toggles between raw editing and preview modes purely using Vanilla JavaScript ES Modules, avoiding any heavy React/Webpack build steps.
+- **SAR Editor Handoff**: For `TRUE_POSITIVE` verdicts, the UI seamlessly injects a "Proceed to SAR Generation" action. By serializing the structured JSON verdict into `sessionStorage`, we enable a stateless handoff to the `/sar-editor` route, which features a two-panel side-by-side layout (verdict input vs. actual rich-text document generation via SSE).
+- **SAR Document Rendering & Streaming**: The SAR Editor utilizes a robust Dual-View Markdown system. A raw `textarea` captures the document structure while a live preview pane renders it using `markdown-it`. The frontend dynamically tracks custom backend Server-Sent Events—including `debug_token` for real-time Glossary Code formulation and standard `token` for the final markdown narrative. To prevent XSS vulnerabilities from the LLM stream, all rendered HTML is rigorously sanitized via `DOMPurify` before entering the DOM. The UI cleanly toggles between raw editing and preview modes purely using Vanilla JavaScript ES Modules.
+- **Agent Raw Reasoning Viewer**: We deployed an interactive `<details>` console directly into the SAR editor left panel. This debugging UI robustly parses multimodal `debug_token` SSE streams token-by-token (with strict try/catch fault tolerance for JSON payload validation). This grants analysts immediate, transparent visibility into the Agent's raw JSON construction *while* the NCA matrix codes are actively being selected.
 - **XAI Inspector Mode**: To prevent the AI from acting as a "Black Box", the SAR Editor features an Inspector toggle switch. When activated, a regex engine intercepts the LLM's `[REASONING: ...]` internal traces and transforms them into interactive, floating Tailwind tooltips before markdown compilation. This allows human reviewers to hover over generated passages and read the precise analytical logic behind them. The feature is implemented using cleverly flattened, valid HTML `<span>` structures alongside specific `DOMPurify` whitelists (`ADD_TAGS: ['span', 'strong']`, `ADD_ATTR: ['class']`) to natively execute `group-hover` CSS behaviors securely.
 
 Both interfaces use `graph.stream(..., stream_mode="messages")`. This streams the LLM's "Chain of Thought" back to the user token-by-token in real-time. 
@@ -210,6 +211,19 @@ The prompt includes strict guardrails for evidence quality:
 ### FORMAT B Enforcement
 
 The prompt now includes explicit "critical violation" language ensuring the LLM writes all three FORMAT B steps (`ANALYSIS → UPDATED HYPOTHESIS → NEXT STEP`) after *every* tool result — including results that show no suspicious flags. Skipping FORMAT B and proceeding directly to a tool call is flagged as a critical violation. This prevents the agent from silently consuming benign results without documenting its reasoning.
+
+---
+
+## 5. SAR Document Generation Pipeline
+
+While the Investigator Agent produces the initial logic (the JSON Verdict), translating that into a legally compliant, NCA-formatted Suspicious Activity Report (SAR) requires a drastically different prompt style. 
+
+The `generate_section_3()` orchestrator located in `agent/sar_generator.py` relies on a highly efficient **Two-Call Pipeline**:
+
+1. **Step 1: Code Identification (Reasoning Phase):** The LLM applies statistical mapping logic against the `verdict_json` using an embedded `NCA UKFIU Matrix`. Using `llm.stream()`, this initial JSON structural formulation is beamed actively to the UI's "Agent Raw Reasoning" console via `debug_token` SSE events, granting complete transparency as the system justifies *why* specific codes like `XXHRCXX` or `XXTBMLXX` were selected. Once this stream stops, the string buffer is parsed strictly by Python into a `code_identification` dictionary payload.
+2. **Step 2: Narrative writing (Creative Phase):** Rather than blindly outputting prose, the second LLM prompt receives *both* the original `verdict_json` AND the exact `code_identification` JSON produced in Step 1. Armed directly with its own structured compliance codes, the Agent begins streaming `token` SSE events mapping the data sequentially into a formal UK `Da Silva / Shah` threshold narrative structure.
+
+**Design Decision:** By deliberately isolating the logical matrix mapping (JSON validation) from the creative prose writing (Markdown generation) into two physically independent LLM calls, we eliminate dual-focus cognitive strain on the models. This vastly reduces formatting hallucinations and ensures that the final SAR document citations perfectly align with the NCA code selection.
 
 ---
 

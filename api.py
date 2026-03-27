@@ -20,6 +20,7 @@ from schemas.alert import AlertPayload
 from agent.prompts import build_system_prompt
 from agent.graph import graph, drain_rate_limit_events, clear_rate_limit_events
 from agent.llm import get_llm_config
+from agent.sar_generator import generate_section_3
 
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -252,6 +253,22 @@ async def sar_editor(request: Request):
 
 
 import asyncio
+
+@app.post("/generate-sar")
+async def generate_sar(request: Request):
+    """
+    Real two-call LLM pipeline to generate Section 3 of the SAR.
+    """
+    verdict = await request.json()
+    return StreamingResponse(
+        generate_section_3(verdict),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 @app.get("/generate-sar-mock")
 async def generate_sar_mock():

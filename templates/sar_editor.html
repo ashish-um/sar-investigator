@@ -26,6 +26,18 @@
                 <button id="generate-sar-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                     GENERATE SAR DOCUMENT
                 </button>
+
+                <!-- Agent Raw Reasoning (Debug) -->
+                <details class="group bg-slate-50 border border-slate-200 rounded text-xs mt-2">
+                    <summary class="font-semibold text-slate-600 p-3 cursor-pointer select-none hover:bg-slate-100 uppercase tracking-wide list-none flex justify-between items-center">
+                        <span>Agent Raw Reasoning (Debug)</span>
+                        <span class="text-xs transition-transform group-open:rotate-180">▼</span>
+                    </summary>
+                    
+                    <div class="p-3 border-t border-slate-200 h-48 overflow-y-auto bg-slate-800 text-green-400 font-mono">
+                        <pre id="debug-codes-stream" class="whitespace-pre-wrap break-words leading-tight">Awaiting stream...</pre>
+                    </div>
+                </details>
             </div>
         </section>
 
@@ -227,52 +239,126 @@
         }
 
         // SSE Stream Logic
-        generateBtn.addEventListener('click', () => {
+        generateBtn.addEventListener('click', async () => {
             generateBtn.disabled = true;
             generateBtn.innerText = "Generating...";
             
             rawMarkdown = ""; // Reset
             render();
             
-            const sse = new EventSource('/generate-sar-mock');
-
-            sse.addEventListener('section_start', (e) => {
-                let title = e.data;
-                try { title = JSON.parse(e.data); } catch(err) {}
-                rawMarkdown += `\n\n## ${title}\n\n`;
-                render();
-            });
-
-            sse.addEventListener('token', (e) => {
-                const parsed = JSON.parse(e.data);
-                rawMarkdown += parsed.text;
-                render();
-                
-                // Correctly target the specific scrollable container
-                const scrollContainer = document.getElementById('right-panel-scroll');
-                if (scrollContainer) {
-                    scrollContainer.scrollTop = scrollContainer.scrollHeight;
+            const debugContainer = document.getElementById('debug-codes-stream');
+            if (debugContainer) debugContainer.textContent = "Awaiting stream...";
+            
+            const verdictInput = document.getElementById('verdict-input').value;
+            let verdict = {};
+            if (verdictInput) {
+                try {
+                    verdict = JSON.parse(verdictInput);
+                } catch (e) {
+                    console.error("Invalid JSON verdict");
                 }
-            });
+            }
 
-            sse.addEventListener('section_done', (e) => {
-                rawMarkdown += `\n\n`;
-                render();
-            });
+            try {
+                const response = await fetch('/generate-sar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(verdict)
+                });
 
-            sse.addEventListener('complete', () => {
-                sse.close();
-                generateBtn.innerText = "Generation Complete";
-                generateBtn.classList.replace("bg-blue-600", "bg-green-600");
-                generateBtn.classList.replace("hover:bg-blue-700", "bg-green-600");
-            });
+                if (!response.body) throw new Error("No response body");
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let buffer = "";
 
-            sse.onerror = () => {
-                sse.close();
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const events = buffer.split('\n\n');
+                    buffer = events.pop() || "";
+
+                    for (const eventStr of events) {
+                        if (!eventStr.trim()) continue;
+                        
+                        const lines = eventStr.split('\n');
+                        let eventType = 'message';
+                        let eventData = '';
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('event:')) {
+                                eventType = line.substring(6).trim();
+                            } else if (line.startsWith('data:')) {
+                                eventData += line.substring(5).trim();
+                            }
+                        }
+
+                        if (eventData) {
+                            try {
+                                const parsed = JSON.parse(eventData);
+                                
+                                if (eventType === 'section_start') {
+                                    rawMarkdown += `\n\n## ${parsed}\n\n`;
+                                    render();
+                                } else if (eventType === 'token') {
+                                    const tokenText = parsed.token || parsed.text || "";
+                                    rawMarkdown += tokenText;
+                                    render();
+                                    
+                                    const scrollContainer = document.getElementById('right-panel-scroll');
+                                    if (scrollContainer) {
+                                        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+                                    }
+                                } else if (eventType === 'debug_token') {
+                                    if (debugContainer) {
+                                        if (debugContainer.textContent === "Awaiting stream...") {
+                                            debugContainer.textContent = "";
+                                        }
+                                        debugContainer.textContent += parsed.token;
+                                        debugContainer.parentElement.scrollTop = debugContainer.parentElement.scrollHeight;
+                                    }
+                                } else if (eventType === 'section_done') {
+                                    rawMarkdown += `\n\n`;
+                                    render();
+                                } else if (eventType === 'section3_codes_identified') {
+                                    console.log("Section 3 Codes Identified:", parsed);
+                                } else if (eventType === 'section3_done') {
+                                    console.log("Section 3 Done:", parsed);
+                                    sessionStorage.setItem('section3_metadata', JSON.stringify({
+                                        glossary_codes: parsed.glossary_codes,
+                                        codes_string: parsed.codes_string
+                                    }));
+                                } else if (eventType === 'error') {
+                                    console.error("SAR Generation Error:", parsed);
+                                    generateBtn.innerText = "Error - Try Again";
+                                    generateBtn.classList.replace("bg-blue-600", "bg-red-600");
+                                    generateBtn.disabled = false;
+                                } else if (eventType === 'complete') {
+                                    generateBtn.innerText = "Generation Complete";
+                                    generateBtn.classList.replace("bg-blue-600", "bg-green-600");
+                                    generateBtn.classList.replace("hover:bg-blue-700", "bg-green-600");
+                                }
+                            } catch (err) {
+                                console.error('Failed to parse SSE JSON data:', err, eventData);
+                            }
+                        }
+                    }
+                }
+                
+                // If stream finishes normally and wasn't marked complete by an event message
+                if (generateBtn.innerText === "Generating...") {
+                    generateBtn.innerText = "Generation Complete";
+                    generateBtn.classList.replace("bg-blue-600", "bg-green-600");
+                    generateBtn.classList.replace("hover:bg-blue-700", "bg-green-600");
+                }
+            } catch (error) {
+                console.error("Stream error:", error);
                 generateBtn.innerText = "Error - Try Again";
                 generateBtn.classList.replace("bg-blue-600", "bg-red-600");
                 generateBtn.disabled = false;
-            };
+            }
         });
     </script>
 </body>
