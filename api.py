@@ -20,7 +20,7 @@ from schemas.alert import AlertPayload
 from agent.prompts import build_system_prompt
 from agent.graph import graph, drain_rate_limit_events, clear_rate_limit_events
 from agent.llm import get_llm_config
-from agent.sar_generator import generate_section_3, generate_section_4, generate_section_5, generate_section_6, generate_section_7, generate_section_8, generate_section_9
+from agent.sar_generator import generate_section_3, generate_section_4, generate_section_5, generate_section_6, generate_section_7, generate_section_8, generate_section_9, generate_section_10, generate_section_11
 from agent.legal_context_builder import build_legal_context
 
 import logging
@@ -283,6 +283,10 @@ async def generate_specific_section(section_id: str, request: Request):
         generator = generate_section_8(verdict, legal_context)
     elif section_id == "section_9":
         generator = generate_section_9(verdict, legal_context)
+    elif section_id == "section_10":
+        generator = generate_section_10(verdict, legal_context)
+    elif section_id == "section_11":
+        generator = generate_section_11(verdict, legal_context)
     else:
         raise HTTPException(status_code=404, detail=f"Generator for {section_id} not implemented yet.")
 

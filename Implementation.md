@@ -269,6 +269,13 @@ The `generate_section_9()` generator iterates over the `false_positive_hypothese
 - The prompt enforces strict JMLSG Part I and FCA Financial Crime Guide boilerplate at the onset, and dynamically injects the `caselaw` parameter (e.g., *R v Da Silva*) into the conclusive statement. This structure firmly demonstrates to regulators that the institution satisfied the requisite suspicion thresholds prior to filing.
 - As with previous components, the raw textual prompt is routed back to the client interface for live XAI observability.
 
+### Sections 10 and 11: Prior SAR History and DAML Determination
+
+The generation pipeline concludes the document synthesis with Sections 10 and 11, focusing entirely on statutory reporting obligations and permissions via `generate_section_10()` and `generate_section_11()`.
+- **Section 10 (Prior History)**: Analyzes the `duplicate_sar_safe` flag. Evaluated by `SECTION_10_HISTORY_PROMPT`, it produces a highly formal disclosure regarding prior filing activity and asserts whether duplicate reporting restrictions apply.
+- **Section 11 (DAML)**: Processes the `daml_required` state. If a Defence Against Money Laundering (DAML) under POCA 2002 s.335 is requested, `SECTION_11_DAML_PROMPT` enforces the exact tripartite structure legally mandated for NCA consent (Grounds for Suspicion, Description of Property, and The Prohibited Act), synthesizing directly from the `daml_notes`. 
+- Both generators guarantee their live logic streams identically to the "Agent Raw Reasoning" console to preserve full end-to-end XAI traceability through the completion of the document.
+
 ---
 
 ## Conclusion

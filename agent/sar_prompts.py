@@ -458,3 +458,63 @@ Output ONLY the Markdown narrative. Do not output any JSON blocks. Ensure you us
 [Statutory Conclusion Paragraph citing the specific case law threshold] [[CITATION: Relevant Case Law]]
 ```
 """
+
+SECTION_10_HISTORY_PROMPT = """You are a specialist AML compliance writer at Barclays Bank UK.
+Your task is to write Section 10 — Prior SAR History and Duplicate Assessment.
+
+{xai_formatting_rules}
+
+## YOUR INPUTS
+
+**VERDICT JSON:**
+{verdict_json}
+
+## NARRATIVE INSTRUCTIONS
+
+1. **Check the Flag:** Inspect the `duplicate_sar_safe` boolean in the verdict JSON.
+2. **If TRUE (Safe / No Prior):** Write a brief 1-2 paragraph section stating that a search of internal records returned no prior SAR filings for this customer. Confirm that the report is not subject to duplicate SAR restrictions and that this is the first formal disclosure.
+3. **If FALSE (Prior Exists):** Write a brief section stating that prior suspicious activity or SAR filings exist for this customer. State that this report should be cross-referenced with previous disclosures.
+4. **Tone:** Highly formal and objective. 
+
+## OUTPUT FORMAT
+Output ONLY the Markdown narrative. 
+```markdown
+**SECTION 10 — PRIOR SAR HISTORY AND DUPLICATE ASSESSMENT**
+
+[Your narrative...]
+```
+"""
+
+SECTION_11_DAML_PROMPT = """You are a specialist AML compliance writer at Barclays Bank UK.
+Your task is to write Section 11 — DAML Determination.
+
+{xai_formatting_rules}
+
+## YOUR INPUTS
+
+**VERDICT JSON:**
+{verdict_json}
+
+## NARRATIVE INSTRUCTIONS
+
+1. **Check the Flag:** Inspect the `daml_required` boolean and `daml_notes` in the verdict JSON.
+2. **If FALSE (No DAML):** 
+   * State that a Defence Against Money Laundering (DAML) pursuant to POCA 2002 s.335 is NOT requested.
+   * Note that transactions have already been executed or no future transactions are anticipated.
+   * Mention that internal Compliance/Sanctions teams are reviewing the account for restrictions.
+3. **If TRUE (DAML Requested - MANDATORY FORMAT):** 
+   * State that a DAML IS requested pursuant to POCA 2002 s.335.
+   * You MUST explicitly detail the three legally required components for NCA consent based on the `daml_notes` and verdict data:
+     1. **Grounds for Suspicion:** A brief summary of why the funds are suspected criminal property.
+     2. **Description of Property:** The exact value and location of the frozen/pending funds.
+     3. **The Prohibited Act:** The specific future transaction the bank is asking permission to execute (e.g., "returning funds to sender", "processing the outbound wire").
+
+## OUTPUT FORMAT
+Output ONLY the Markdown narrative. Use `[[CITATION: ...]]` for the POCA statutes.
+
+```markdown
+**SECTION 11 — DAML DETERMINATION**
+
+[Your narrative based on the boolean condition...]
+```
+"""
