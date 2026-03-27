@@ -248,6 +248,13 @@ The `generate_section_6()` generator implements a novel **Looping Generation Arc
 - After all rules are processed, a final LLM stream is initiated using the `SECTION_6_STATUTORY_PROMPT`. This concluding call dynamically injects the `always_present` legal duties (e.g., POCA 2002 s.330) and the specific Case Law thresholds (e.g., *Da Silva*), enforcing strict forensic boilerplate (e.g., "A vague feeling of unease was expressly excluded"). It also conditionally dictates DAML (Appropriate Consent) requirements.
 - As with prior sections, all intermediate LLM prompts utilized in the loop are piped to the "Agent Raw Reasoning" console via `debug_token` events for full XAI observability.
 
+### Section 7: Watchlist Screening Results
+
+The `generate_section_7()` generator specifically aggregates all `watchlist_hits` arrays found within the target customer's or counterparty's `key_evidence` records.
+- It utilizes the `SECTION_7_WATCHLIST_PROMPT` to parse the JSON and output a structured 7-column compliance matrix formatted in GitHub Flavored Markdown.
+- To maintain legal rigor, the generator specifically filters the `legal_context` to inject only `sanctions_specific` statutes. This guarantees the LLM strictly synthesizes post-table compliance notes regarding mandatory asset freezes (e.g., OFSI, HM Treasury) without hallucinating unrelated POCA offenses.
+- In the event of a negative screen (no watchlist hits identified), the prompt enforces a highly formal empty state declaration, averting confusing or overly verbose LLM responses.
+
 ---
 
 ## Conclusion
