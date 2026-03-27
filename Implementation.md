@@ -233,6 +233,14 @@ The `generate_section_3()` orchestrator located in `agent/sar_generator.py` reli
 The `generate_section_4()` generator is explicitly designed to calculate and highlight the **Income Multiple**—the discrepancy between the customer's KYC baseline declared income and the flagged suspicious activity volume. 
 - It evaluates the `verdict_json` using the `SECTION_4_PROFILE_PROMPT` bounded by strict `always_present` statutory obligations, explicitly preventing the LLM from hallucinating deep legal analysis (which is reserved for Section 6).
 - To guarantee full XAI (Explainable AI) transparency, the exact formatted prompt is immediately yielded to the UI's "Agent Raw Reasoning" console via `debug_token` events before the standard markdown generation stream even begins.
+
+### Section 5: Chronological Description of Suspicious Activity
+
+The `generate_section_5()` generator sequences the raw transaction arrays found inside the `key_evidence` block into a cohesive, forensic timeline.
+- It leverages the `SECTION_5_CHRONOLOGY_PROMPT` to automatically infer transaction directions (CREDIT/DEBIT), format a robust 6-column GitHub-flavored markdown tracking table, and append precise compliance notes (such as `XXHRCXX` flags) directly to the impacted rows.
+- The generator concludes by synthesizing the timeline, explicitly calculating the "Velocity" of the funds and naming the money laundering "Typology" (e.g., structuring, layering) matched against the regulatory significance defined in the verdict.
+- Just like Section 4, the full context prompt is yielded to the "Agent Raw Reasoning" console prior to streaming the generated response back to the GUI.
+
 ---
 
 ## Conclusion

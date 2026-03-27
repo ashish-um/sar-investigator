@@ -210,3 +210,53 @@ Output ONLY the Markdown narrative. Do not output any JSON blocks.
 [Ensure all Markdown Footnotes/Citations are placed inline using [[CITATION: Source]]. Use [[REASONING: ...]] tags for your calculations.]
 ```
 """
+
+SECTION_5_CHRONOLOGY_PROMPT = """You are a specialist AML compliance writer at Barclays Bank UK.
+Your task is to write Section 5 — Chronological Description of Suspicious Activity — of a Suspicious Activity Report (SAR).
+
+{xai_formatting_rules}
+
+## YOUR INPUTS
+
+**VERDICT JSON:**
+{verdict_json}
+
+## NARRATIVE INSTRUCTIONS
+
+Your goal is to extract all transaction data found inside the `key_evidence` -> `supporting_data` arrays and present it as a cohesive, forensic timeline.
+
+1. **Standard Introduction:** Begin with exactly this phrasing (inserting the correct dates and account number from the data):
+   "The following transactions were identified in account [Account Number] during the observation window of [Start Date] to [End Date]. All amounts are in GBP. The transaction record is presented in chronological order. Compliance notes are appended where relevant."
+
+2. **Chronological Table:** Construct a GitHub Flavored Markdown table consolidating all the transactions mentioned in the verdict. 
+   * You MUST sort the table chronologically by Date.
+   * Required Columns: `| Date | Direction | Amount (GBP) | Counterparty | Transaction ID | Compliance Note |`
+   * **Direction:** Infer whether it is a CREDIT or DEBIT.
+   * **Transaction ID:** You MUST append a citation tag here (e.g., `TXN-2024-000091 [[CITATION: TXN-2024-000091]]`).
+   * **Compliance Note:** For each row, provide a brief, punchy forensic note. If the transaction involves a high-risk country, state it and mention the relevant code (e.g., "XXHRCXX triggered"). If it involves a sanctioned entity, explicitly state the watchlist match. 
+
+3. **Typology Synthesis (Post-Table Narrative):** Write 2-3 paragraphs synthesizing the timeline you just presented.
+   * **The Pattern:** Explicitly name the money laundering typology exhibited (e.g., "layering phase", "structuring / smurfing", "pass-through behavior").
+   * **The Velocity:** Summarize the inflows and outflows using the specific timeframes (e.g., "credited the customer's account with a combined total of £X within a compressed 48-hour window").
+   * **Regulatory Significance:** State the specific legal breaches or regulatory concerns triggered by this timeline (e.g., POCA 2002, specific Sanctions Regulations, FATF recommendations) using the `regulatory_significance` fields provided in the verdict JSON.
+
+## OUTPUT FORMAT
+
+Output ONLY the Markdown narrative. Do not output any JSON blocks.
+
+```markdown
+**SECTION 5 — CHRONOLOGICAL DESCRIPTION OF SUSPICIOUS ACTIVITY**
+
+[Standard Introduction]
+
+| Date | Direction | Amount (GBP) | Counterparty | Transaction ID | Compliance Note |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| [Date] | [Direction] | [Amt] | [Name] | [ID] [[CITATION: ID]] | [Forensic Note] |
+
+[Typology Synthesis Paragraph 1: The Pattern and Velocity]
+
+[Typology Synthesis Paragraph 2: Watchlist hits, ultimate destination, and Regulatory Significance]
+
+[Ensure all reasoning tags [[REASONING: ...]] are placed inline where appropriate within your synthesis paragraphs to explain your logic.]
+```
+"""
