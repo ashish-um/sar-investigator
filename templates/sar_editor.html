@@ -356,6 +356,67 @@
         // SSE Stream Logic
         window.currentAbortController = null;
 
+        // --- NEW STATE MACHINE ---
+        // 1. Define the logical order of sections
+        const SECTION_ORDER = [
+            { id: "section_1", name: "Section 1" },
+            { id: "section_2", name: "Section 2" },
+            { id: "section_3", name: "Section 3" },
+            { id: "section_4", name: "Section 4" },
+            { id: "section_5", name: "Section 5" },
+            { id: "section_6", name: "Section 6" },
+            { id: "section_7", name: "Section 7" },
+            { id: "section_8", name: "Section 8" },
+            { id: "section_9", name: "Section 9" },
+            { id: "section_10", name: "Section 10" },
+            { id: "section_11", name: "Section 11" }
+        ];
+
+        // 2. Initialize the state tracker
+        const sectionStatuses = {};
+        SECTION_ORDER.forEach(sec => sectionStatuses[sec.id] = 'pending');
+
+        // 3. Helper to find the next section to generate
+        function getNextPendingSection() {
+            // Finds the first section from top to bottom that is NOT 'done'
+            return SECTION_ORDER.find(sec => sectionStatuses[sec.id] === 'pending' || sectionStatuses[sec.id] === 'error');
+        }
+
+        // 4. Update the Main Button UI based on current state
+        function updateMainButtonUI() {
+            const mainBtn = document.getElementById('generate-sar-btn');
+            if (!mainBtn) return;
+
+            const isGenerating = Object.values(sectionStatuses).includes('generating');
+            
+            if (isGenerating) {
+                mainBtn.disabled = true;
+                mainBtn.textContent = "Generating...";
+                mainBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+
+            const nextSec = getNextPendingSection();
+            if (nextSec) {
+                mainBtn.disabled = false;
+                mainBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-green-600');
+                
+                // If everything is pending, show the default text
+                const allPending = Object.values(sectionStatuses).every(status => status === 'pending');
+                if (allPending) {
+                    mainBtn.textContent = "Generate SAR Document";
+                } else {
+                    mainBtn.textContent = `Proceed to generation of ${nextSec.name}`;
+                }
+            } else {
+                // All sections are done
+                mainBtn.disabled = true;
+                mainBtn.textContent = "All Sections Generated";
+                mainBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-green-600');
+            }
+        }
+        // --- END STATE MACHINE ---
+
         window.triggerSectionGeneration = function(sectionId) {
             const generateBtn = document.getElementById('generate-sar-btn');
             const debugContainer = document.getElementById('debug-codes-stream');
@@ -383,10 +444,9 @@
                 statusBadge.className = "text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded";
             }
 
-            if (generateBtn && sectionId === 'section_3') {
-                generateBtn.disabled = true;
-                generateBtn.innerText = "Generating Section 3...";
-            }
+            // UPDATE STATE: Start
+            sectionStatuses[sectionId] = 'generating';
+            updateMainButtonUI(); // Lock the main button
 
             // 3. Close existing stream if one is running
             if (window.currentAbortController) {
@@ -409,14 +469,13 @@
                 function read() {
                     reader.read().then(({done, value}) => {
                         if (done) {
+                            // UPDATE STATE: Done
+                            sectionStatuses[sectionId] = 'done';
+                            updateMainButtonUI(); // Unlock and update the main button to the next section
+                            
                             if(statusBadge) {
                                 statusBadge.textContent = "Done";
                                 statusBadge.className = "text-xs px-2 py-1 bg-green-100 text-green-700 rounded";
-                            }
-                            if (generateBtn && sectionId === 'section_3') {
-                                generateBtn.innerText = "Generation Complete";
-                                generateBtn.classList.replace("bg-blue-600", "bg-green-600");
-                                generateBtn.disabled = false;
                             }
                             return;
                         }
@@ -479,14 +538,13 @@
                                     }));
                                 } else if (eventType === 'error') {
                                     console.error("SAR Generation Error:", eventData);
+                                    // UPDATE STATE: Error
+                                    sectionStatuses[sectionId] = 'error';
+                                    updateMainButtonUI(); // Unlock the main button so they can retry
+                                    
                                     if (statusBadge) {
                                         statusBadge.textContent = "Error";
                                         statusBadge.className = "text-xs px-2 py-1 bg-red-100 text-red-700 rounded";
-                                    }
-                                    if (generateBtn && sectionId === 'section_3') {
-                                        generateBtn.innerText = "Error - Try Again";
-                                        generateBtn.classList.replace("bg-blue-600", "bg-red-600");
-                                        generateBtn.disabled = false;
                                     }
                                 }
                             }
@@ -496,6 +554,11 @@
                     }).catch(err => {
                         if (err.name === 'AbortError') return;
                         console.error("Stream reader failed:", err);
+                        
+                        // UPDATE STATE: Error
+                        sectionStatuses[sectionId] = 'error';
+                        updateMainButtonUI(); // Unlock the main button so they can retry
+                        
                         if(statusBadge) {
                             statusBadge.textContent = "Error";
                             statusBadge.className = "text-xs px-2 py-1 bg-red-100 text-red-700 rounded";
@@ -506,14 +569,14 @@
             }).catch(err => {
                 if (err.name === 'AbortError') return;
                 console.error("Stream failed:", err);
+                
+                // UPDATE STATE: Error
+                sectionStatuses[sectionId] = 'error';
+                updateMainButtonUI(); // Unlock the main button so they can retry
+                
                 if(statusBadge) {
                     statusBadge.textContent = "Error";
                     statusBadge.className = "text-xs px-2 py-1 bg-red-100 text-red-700 rounded";
-                }
-                if (generateBtn && sectionId === 'section_3') {
-                    generateBtn.innerText = "Error - Try Again";
-                    generateBtn.classList.replace("bg-blue-600", "bg-red-600");
-                    generateBtn.disabled = false;
                 }
             });
         };
@@ -521,14 +584,30 @@
         // 5. Hook up the Main "Generate SAR Document" button
         if (generateBtn) {
             generateBtn.addEventListener('click', () => {
-                rawMarkdown = ""; // Clear on main button click
-                render();
-                const debugContainer = document.getElementById('debug-codes-stream');
-                if (debugContainer) debugContainer.textContent = "Awaiting stream...";
-                
-                triggerSectionGeneration('section_3');
+                const nextSec = getNextPendingSection();
+                if (nextSec) {
+                    // Only clear and reset debug on the very first start
+                    const allPending = Object.values(sectionStatuses).every(status => status === 'pending');
+                    if (allPending) {
+                        rawMarkdown = ""; // Clear on main button click
+                        render();
+                        const debugContainer = document.getElementById('debug-codes-stream');
+                        if (debugContainer) debugContainer.textContent = "Awaiting stream...";
+                    }
+                    
+                    triggerSectionGeneration(nextSec.id);
+                    
+                    // Optional: Smooth scroll the Right Panel to the target card
+                    const targetCard = document.getElementById(`status-${nextSec.id}`);
+                    if (targetCard) {
+                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
             });
         }
+
+        // Call once on page load to set the initial button state
+        updateMainButtonUI();
     </script>
 </body>
 </html>

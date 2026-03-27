@@ -287,6 +287,17 @@ The generation pipeline concludes the document synthesis with Sections 10 and 11
 
 ---
 
+## 6. Frontend Architecture: Interactive Generation Control
+
+To manage the complexity of streaming 11 independent document sections asynchronously, the SAR Editor UI (`templates/sar_editor.html`) integrates a custom **"Smart Next" State Machine**.
+
+1. **State Tracking**: A central JavaScript array (`SECTION_ORDER`) maintains the logical flow of the document (Sections 1 through 11). A globally reactive dictionary (`sectionStatuses`) maps each section ID to its live generation phase (`pending`, `generating`, `done`, or `error`).
+2. **Dynamic UI Locking**: When any individual section engages the `triggerSectionGeneration()` API loop, the global state flips to `generating`. The main "Generate SAR" button instantly isolates itself, disabling user clicks and graying out to prevent duplicate stream race conditions.
+3. **Smart Discovery**: Upon a successful stream closure (`done`), the state machine triggers `updateMainButtonUI()` which scans top-down to find the next sequential `pending` section.
+4. **Context-Aware Presentation**: The primary generation button dynamically rewrites its call-to-action (e.g., "Proceed to generation of Section 4"). It intelligently bridges gaps gracefully if an analyst manually forces out-of-order component generation via the Right Panel control cards.
+
+---
+
 ## Conclusion
 
 The AML SAR Investigator Agent is not just a chatbot bolted to a database. It is a highly constrained, stateful pipeline where:
