@@ -298,6 +298,22 @@ To manage the complexity of streaming 11 independent document sections asynchron
 
 ---
 
+## 7. Dynamic Configuration & Visual Rules Editor
+
+To ensure the agent remains adaptable to evolving AML regulations without requiring code changes, the core compliance taxonomy (AML Rules, Glossary Codes, and Legal Citations) has been decoupled from the Python source code into dynamic JSON configuration files.
+
+### The ConfigManager
+A centralized singleton (`agent/config_manager.py`) manages atomic I/O and state synchronization for `config/aml_rules.json`, `config/glossary_codes.json`, and `config/legal_snippets.json`. The legal context and dynamic prompt engines fetch these configurations at runtime, guaranteeing the LLM is always driven by the latest firm-wide policies.
+
+### The Rules Editor GUI
+We exposed dedicated RESTful `GET` and `PUT` API routes under `/api/rules/*` and deployed a standalone **Rules Editor** frontend dashboard (`/rules-editor`). 
+Designed specifically for non-technical compliance stakeholders, the interface replaces raw JSON payloads with a robust "Form-to-JSON" visual GUI utilizing Vanilla JavaScript and Tailwind CSS:
+- **Interactive Forms**: AML rule definitions render as dedicated cards with dynamic textareas for triggers and evidence; regulatory citations automatically join and split into editable narrative blocks.
+- **Glossary Matrix**: A dynamic reference grid allows analysts to map NCA UKFIU primary and conditional codes using interactive, deletable "pills" and inline text inputs.
+- **State Protection**: A robust client-side tracker (`window.appState`) monitors all DOM modifications via `oninput` events, proactively locking unsaved changes behind a modal warning system to prevent data loss before firing updates back to the API.
+
+---
+
 ## Conclusion
 
 The AML SAR Investigator Agent is not just a chatbot bolted to a database. It is a highly constrained, stateful pipeline where:
@@ -305,5 +321,6 @@ The AML SAR Investigator Agent is not just a chatbot bolted to a database. It is
 2. The LangGraph state manages the execution loop perfectly.
 3. The Prompt enforces a strict, legally defensible standard of reasoning and evidence citation.
 4. The Runner safely extracts the final payload regardless of LLM markdown inconsistencies.
+5. The Configuration Engine empowers analysts to update regulatory logic dynamically via a visual GUI.
 
 By forcing the LLM to adhere to the `ANALYSIS` -> `UPDATED HYPOTHESIS` -> `NEXT STEP` paradigm, the system generates high-quality, auditable AML investigations that parallel the rigor of a human analyst.
