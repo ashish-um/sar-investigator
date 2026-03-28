@@ -1,0 +1,36 @@
+{
+  "rule_specific_snippets": {
+    "RULE-01": [
+      "POCA 2002 s.327: Concealing or converting criminal property (structuring cash/deposits constitutes converting or disguising criminal property).",
+      "MLR 2017 Reg. 28 & 19: Customer due diligence measures require re-verification where transaction amounts and patterns are intentionally clustered to evade reporting thresholds."
+    ],
+    "RULE-02": [
+      "POCA 2002 s.327 & s.328: Rapid pass-through of funds is a classic placement and layering mechanism facilitating the control of criminal property.",
+      "FATF Recommendation 20: Rapid fund movements without plausible commercial rationale require immediate suspicious transaction reporting."
+    ],
+    "RULE-03": [
+      "MLR 2017 Reg. 33(1)(b): Mandatory Enhanced Due Diligence (EDD) for any business relationship or transaction involving a natural or legal person established in a high-risk third country.",
+      "FATF Recommendation 19: Enhanced countermeasures must be applied to transactions involving FATF grey-listed or black-listed jurisdictions."
+    ],
+    "RULE-04": [
+      "MLR 2017 Reg. 28(13): Firms must assess the purpose of the business relationship. Transaction volume and velocity must be assessed against declared income and occupation profile.",
+      "FCA FCG 3.2.5: Ongoing monitoring must scrutinise transactions to ensure consistency with the firm's knowledge of the customer's legitimate business."
+    ],
+    "RULE-05": [
+      "POCA 2002 s.327 & s.330: Reactivation of a dormant account with large-value movement is a recognised vehicle for introducing criminal proceeds.",
+      "MLR 2017 Reg. 27: Reactivation of a dormant account must be treated as a new business relationship requiring full CDD re-application."
+    ],
+    "RULE-06": [
+      "POCA 2002 s.327 & s.328: Aggregating funds from multiple unrelated third parties on behalf of a customer constitutes facilitating the retention of criminal property.",
+      "MLR 2017 Reg. 28: The firm must understand the beneficial owner and source of funds for unusual third-party payments."
+    ],
+    "RULE-07": [
+      "Sanctions and Anti-Money Laundering Act 2018 (SAMLA): Asset freezing and prohibition obligations apply to designated persons.",
+      "MLR 2017 Reg. 35: Mandatory Enhanced Due Diligence is required for PEPs, sanctioned individuals, or their family members and known close associates."
+    ],
+    "RULE-08": [
+      "POCA 2002 s.327 & s.328: Circular fund flows (round-tripping) that obscure the origin of funds constitute disguising criminal property.",
+      "FCA FCG 3.2.5: Fund flows that do not reflect genuine commercial activity or return via different routes require immediate investigation."
+    ]
+  }
+}

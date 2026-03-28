@@ -33,49 +33,14 @@ to a Suspicious Activity Report based on an investigation verdict.
 
 ## RULES TO CODES MATRIX
 
-| Rule    | Title                        | Primary Codes         | Conditional Codes                              |
-|---------|------------------------------|-----------------------|------------------------------------------------|
-| RULE-01 | Structuring / Smurfing       | None (narrative only) | XXHRCXX XXVAXX XXS99XX XXGVTXX                 |
-| RULE-02 | Rapid Movement of Funds      | None (narrative only) | XXTBMLXX XXVAXX XXHRCXX XXS99XX                |
-| RULE-03 | High-Risk Jurisdiction       | XXHRCXX               | XXSNEXX XXPRFXX XXTBMLXX XXS99XX               |
-| RULE-04 | Transaction-Profile Mismatch | None (narrative only) | XXPRFXX XXDRUXX XXF4XX XXF9XX XXHRCXX XXS99XX  |
-| RULE-05 | Dormant Account Reactivation | None (narrative only) | XXHRCXX XXVAXX XXPRFXX XXDRUXX XXF9XX XXS99XX  |
-| RULE-06 | Third-Party Funding          | XXTBMLXX XXPRFXX      | XXF9XX XXMSHTXX XXDRUXX XXHRCXX XXS99XX        |
-| RULE-07 | PEP / Sanctions Proximity    | XXD7XX XXD8XX XXSNEXX | XXD9XX XXHRCXX XXPRFXX XXPROPXX XXTEOSX XXS99XX XXPCPXX |
-| RULE-08 | Round Tripping / Layering    | XXTBMLXX              | XXVAXX XXMLTMXX XXPRFXX XXHRCXX XXPROPXX XXSNEXX XXS99XX |
+{rules_to_codes_matrix}
 
 ## CONDITIONAL CODE DECISION RULES
 
 Apply conditional codes ONLY when the condition is explicitly satisfied 
 by evidence in the verdict JSON:
 
-- **XXS99XX** — daml_required is true in the verdict. MUST be first if present.
-- **XXHRCXX** — Any counterparty involves a FATF grey/black-listed jurisdiction.
-  FATF Black List (Feb 2026): DPRK, Iran, Myanmar.
-  FATF Grey List (Feb 2026): Algeria, Angola, Bolivia, Bulgaria, Cameroon,
-  Côte d'Ivoire, DRC, Haiti, Kenya, Kuwait, Lao PDR, Lebanon, Monaco,
-  Namibia, Nepal, Papua New Guinea, South Sudan, Syria, Venezuela, Vietnam,
-  Virgin Islands (UK), Yemen. Russia: FATF membership suspended Feb 2023.
-- **XXSNEXX** — Any watchlist_hits entry has source HM_TREASURY, EU_CONSOLIDATED,
-  or UN, OR a counterparty is confirmed sanctioned.
-- **XXD7XX** — Customer or associated person is a foreign/international PEP 
-  or sanctions associate (non-UK public function).
-- **XXD8XX** — Customer or associated person holds or held a UK domestic 
-  public function.
-- **XXTBMLXX** — Fund movements relate to trade transactions, import/export 
-  invoicing, or documentary letters of credit.
-- **XXPRFXX** — A lawyer, accountant, or company formation agent is identified 
-  as facilitating the activity.
-- **XXPCPXX** — Sanctioned entity is linked to weapons proliferation financing.
-- **XXD9XX** — Bribery or corruption proceeds suspected alongside PEP proximity.
-- **XXTEOSX** — PEP funds routed via offshore structures.
-- **XXPROPXX** — Funds linked to real estate transactions.
-- **XXMLTMXX** — Round-tripping involves capital market instruments.
-- **XXVAXX** — Funds involve cryptocurrency or virtual assets.
-- **XXDRUXX** — Activity consistent with drug trafficking proceeds.
-- **XXF9XX** — Activity consistent with fraud proceeds against private sector.
-- **XXGVTXX** — Total activity value is £3,000 or less and no terrorism 
-  financing interest is known. Never combine with XXVICTXX.
+{conditional_code_decision_rules}
 
 ## ADDITIONAL RULES
 - Primary codes are unconditional — always apply them when that rule is triggered

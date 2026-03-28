@@ -1,0 +1,70 @@
+{
+  "rules_to_codes_matrix": [
+    {
+      "rule_id": "RULE-01",
+      "title": "Structuring / Smurfing",
+      "primary_codes": [],
+      "conditional_codes": ["XXHRCXX", "XXVAXX", "XXS99XX", "XXGVTXX"]
+    },
+    {
+      "rule_id": "RULE-02",
+      "title": "Rapid Movement of Funds",
+      "primary_codes": [],
+      "conditional_codes": ["XXTBMLXX", "XXVAXX", "XXHRCXX", "XXS99XX"]
+    },
+    {
+      "rule_id": "RULE-03",
+      "title": "High-Risk Jurisdiction",
+      "primary_codes": ["XXHRCXX"],
+      "conditional_codes": ["XXSNEXX", "XXPRFXX", "XXTBMLXX", "XXS99XX"]
+    },
+    {
+      "rule_id": "RULE-04",
+      "title": "Transaction-Profile Mismatch",
+      "primary_codes": [],
+      "conditional_codes": ["XXPRFXX", "XXDRUXX", "XXF4XX", "XXF9XX", "XXHRCXX", "XXS99XX"]
+    },
+    {
+      "rule_id": "RULE-05",
+      "title": "Dormant Account Reactivation",
+      "primary_codes": [],
+      "conditional_codes": ["XXHRCXX", "XXVAXX", "XXPRFXX", "XXDRUXX", "XXF9XX", "XXS99XX"]
+    },
+    {
+      "rule_id": "RULE-06",
+      "title": "Third-Party Funding",
+      "primary_codes": ["XXTBMLXX", "XXPRFXX"],
+      "conditional_codes": ["XXF9XX", "XXMSHTXX", "XXDRUXX", "XXHRCXX", "XXS99XX"]
+    },
+    {
+      "rule_id": "RULE-07",
+      "title": "PEP / Sanctions Proximity",
+      "primary_codes": ["XXD7XX", "XXD8XX", "XXSNEXX"],
+      "conditional_codes": ["XXD9XX", "XXHRCXX", "XXPRFXX", "XXPROPXX", "XXTEOSX", "XXS99XX", "XXPCPXX"]
+    },
+    {
+      "rule_id": "RULE-08",
+      "title": "Round Tripping / Layering",
+      "primary_codes": ["XXTBMLXX"],
+      "conditional_codes": ["XXVAXX", "XXMLTMXX", "XXPRFXX", "XXHRCXX", "XXPROPXX", "XXSNEXX", "XXS99XX"]
+    }
+  ],
+  "conditional_code_decision_rules": {
+    "XXS99XX": "daml_required is true in the verdict. MUST be first if present.",
+    "XXHRCXX": "Any counterparty involves a FATF grey/black-listed jurisdiction. FATF Black List (Feb 2026): DPRK, Iran, Myanmar. FATF Grey List (Feb 2026): Algeria, Angola, Bolivia, Bulgaria, Cameroon, Côte d'Ivoire, DRC, Haiti, Kenya, Kuwait, Lao PDR, Lebanon, Monaco, Namibia, Nepal, Papua New Guinea, South Sudan, Syria, Venezuela, Vietnam, Virgin Islands (UK), Yemen. Russia: FATF membership suspended Feb 2023.",
+    "XXSNEXX": "Any watchlist_hits entry has source HM_TREASURY, EU_CONSOLIDATED, or UN, OR a counterparty is confirmed sanctioned.",
+    "XXD7XX": "Customer or associated person is a foreign/international PEP or sanctions associate (non-UK public function).",
+    "XXD8XX": "Customer or associated person holds or held a UK domestic public function.",
+    "XXTBMLXX": "Fund movements relate to trade transactions, import/export invoicing, or documentary letters of credit.",
+    "XXPRFXX": "A lawyer, accountant, or company formation agent is identified as facilitating the activity.",
+    "XXPCPXX": "Sanctioned entity is linked to weapons proliferation financing.",
+    "XXD9XX": "Bribery or corruption proceeds suspected alongside PEP proximity.",
+    "XXTEOSX": "PEP funds routed via offshore structures.",
+    "XXPROPXX": "Funds linked to real estate transactions.",
+    "XXMLTMXX": "Round-tripping involves capital market instruments.",
+    "XXVAXX": "Funds involve cryptocurrency or virtual assets.",
+    "XXDRUXX": "Activity consistent with drug trafficking proceeds.",
+    "XXF9XX": "Activity consistent with fraud proceeds against private sector.",
+    "XXGVTXX": "Total activity value is £3,000 or less and no terrorism financing interest is known. Never combine with XXVICTXX."
+  }
+}

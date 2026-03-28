@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+{% include 'components/head.html' %}
+<body class="m-0 p-0 font-sans bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    {% include 'components/header.html' %}
+
+    <!-- Main Content -->
+    <main class="flex flex-1 overflow-hidden relative">
+        
+        <!-- Sidebar Navigation -->
+        <section class="w-[280px] flex-shrink-0 bg-white border-r border-slate-200 shadow-[2px_0_8px_-4px_rgba(0,0,0,0.1)] z-10 flex flex-col h-full">
+            <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 relative flex items-center justify-between">
+                <h2 class="font-bold text-slate-700 text-sm tracking-wide flex items-center gap-2 uppercase">
+                    Configuration Files
+                </h2>
+            </div>
+            <nav class="p-3 flex flex-col gap-2 overflow-y-auto">
+                <button type="button" class="tab-btn w-full text-left px-4 py-3 rounded text-sm font-medium transition-colors bg-blue-50 text-blue-700 border border-blue-200" data-target="aml-rules">
+                    <div class="font-semibold mb-1">AML Rules</div>
+                    <div class="text-xs text-blue-600/80 font-normal">Edit agent logic and triggers</div>
+                </button>
+                <button type="button" class="tab-btn w-full text-left px-4 py-3 rounded text-sm font-medium transition-colors hover:bg-slate-100 text-slate-600 border border-transparent" data-target="glossary-codes">
+                    <div class="font-semibold mb-1">Glossary Codes</div>
+                    <div class="text-xs text-slate-500 font-normal">Edit NCA reporting matrices</div>
+                </button>
+                <button type="button" class="tab-btn w-full text-left px-4 py-3 rounded text-sm font-medium transition-colors hover:bg-slate-100 text-slate-600 border border-transparent" data-target="legal-snippets">
+                    <div class="font-semibold mb-1">Legal Snippets</div>
+                    <div class="text-xs text-slate-500 font-normal">Edit regulatory citations</div>
+                </button>
+            </nav>
+        </section>
+
+        <!-- Editor Pane -->
+        <div class="flex-1 bg-slate-100 overflow-y-auto h-full flex flex-col items-center">
+            
+            <div class="w-full max-w-5xl bg-white shadow-md my-8 mx-auto rounded-md flex flex-col border border-slate-200" style="min-height: calc(100vh - 8rem);">
+                
+                <!-- Editor Header -->
+                <div class="px-8 py-6 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center rounded-t-md">
+                    <div>
+                        <h1 id="editor-title" class="text-xl font-bold text-slate-800 tracking-tight">AML Rules Configuration</h1>
+                        <p id="editor-desc" class="text-sm text-slate-500 mt-1">Configure the core triggers and evidence requirements for the AML investigation agent.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button id="btn-format" class="px-4 py-2 bg-white border border-slate-300 rounded text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
+                            Format JSON
+                        </button>
+                        <button id="btn-save" class="px-6 py-2 bg-blue-600 rounded text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
+                            <span>Save Changes</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Editor Body -->
+                <div class="flex-1 p-8 bg-slate-100/30 flex flex-col gap-4">
+                    <div id="loading-spinner" class="hidden absolute inset-0 bg-white/50 flex items-center justify-center z-10 backdrop-blur-sm">
+                        <span class="text-slate-500 font-medium animate-pulse">Loading configuration...</span>
+                    </div>
+                    <textarea id="json-editor" class="w-full flex-1 min-h-[600px] p-5 font-mono text-[13px] leading-relaxed text-slate-700 bg-slate-800 border-0 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-inner resize-y" spellcheck="false" placeholder="Loading JSON..."></textarea>
+                </div>
+                
+            </div>
+            
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 transform transition-all duration-300 translate-y-20 opacity-0 z-50 flex items-center gap-3 px-5 py-4 rounded shadow-xl min-w-[300px]">
+        <span id="toast-icon" class="text-lg"></span>
+        <div class="flex flex-col">
+            <span id="toast-title" class="font-bold text-sm"></span>
+            <span id="toast-msg" class="text-xs opacity-90"></span>
+        </div>
+    </div>
+
+    <!-- Load JS Logic -->
+    <script type="module">
+        {% include 'components/js/rules_editor.js' %}
+    </script>
+</body>
+</html>

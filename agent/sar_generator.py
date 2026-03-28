@@ -4,6 +4,7 @@ import asyncio
 from agent.llm import get_llm
 from tools.internal.get_customer_profile import get_customer_profile
 from agent.sar_prompts import SECTION_1_TEMPLATE, SECTION_2_TEMPLATE, SECTION_3_CODE_IDENTIFICATION_PROMPT, SECTION_3_NARRATIVE_PROMPT, XAI_FORMATTING_RULES, SECTION_4_PROFILE_PROMPT, SECTION_5_CHRONOLOGY_PROMPT, SECTION_6_RULE_ANALYSIS_PROMPT, SECTION_6_STATUTORY_PROMPT, SECTION_7_WATCHLIST_PROMPT, SECTION_8_STATISTICS_PROMPT, SECTION_9_HYPOTHESIS_PROMPT, SECTION_10_HISTORY_PROMPT, SECTION_11_DAML_PROMPT
+from agent.config_manager import config
 
 from typing import Any
 
@@ -40,7 +41,9 @@ async def generate_section_3(verdict: dict, legal_context: dict):
 
         # Step 1: Code Identification
         prompt1 = SECTION_3_CODE_IDENTIFICATION_PROMPT.format(
-            verdict_json=json.dumps(verdict, indent=2)
+            verdict_json=json.dumps(verdict, indent=2),
+            rules_to_codes_matrix=config.format_matrix_for_prompt(),
+            conditional_code_decision_rules=config.format_conditional_rules_for_prompt()
         )
         response1_text = ""
         for chunk in llm.stream(prompt1):

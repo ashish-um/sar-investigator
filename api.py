@@ -22,6 +22,7 @@ from agent.graph import graph, drain_rate_limit_events, clear_rate_limit_events
 from agent.llm import get_llm_config
 from agent.sar_generator import generate_section_1, generate_section_2, generate_section_3, generate_section_4, generate_section_5, generate_section_6, generate_section_7, generate_section_8, generate_section_9, generate_section_10, generate_section_11
 from agent.legal_context_builder import build_legal_context
+from agent.config_manager import config
 
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -253,6 +254,12 @@ async def sar_editor(request: Request):
     return templates.TemplateResponse(request, "sar_editor.html", {"llm_config": get_llm_config()})
 
 
+@app.get("/rules-editor")
+async def rules_editor(request: Request):
+    """Serve the Admin Rules Editor screen."""
+    return templates.TemplateResponse(request, "rules_editor.html", {"llm_config": get_llm_config()})
+
+
 import asyncio
 
 @app.post("/generate-section/{section_id}")
@@ -419,3 +426,62 @@ async def get_data_record(table: str, record_id: str):
         if not row:
             return {"error": f"No record found: {table}/{record_id}"}
         return {"table": table, "id": record_id, "data": dict(row)}
+
+
+# ── Dynamic Config Endpoints (Glossary Codes UI) ────────────────────────
+
+@app.get("/api/rules/glossary-codes")
+async def get_glossary_codes():
+    """Return the current glossary codes configuration."""
+    return config.glossary_codes
+
+
+@app.put("/api/rules/glossary-codes")
+async def update_glossary_codes(request: Request):
+    """Update the glossary codes configuration from a JSON payload."""
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    config.save_glossary_codes(payload)
+    return {"status": "ok", "message": "Glossary codes updated and reloaded successfully."}
+
+
+@app.get("/api/rules/aml-rules")
+async def get_aml_rules():
+    """Return the current AML rules configuration."""
+    return config.aml_rules
+
+
+@app.put("/api/rules/aml-rules")
+async def update_aml_rules(request: Request):
+    """Update the AML rules configuration from a JSON payload."""
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    config.save_aml_rules(payload)
+    return {"status": "ok", "message": "AML rules updated and reloaded successfully."}
+
+
+@app.get("/api/rules/legal-snippets")
+async def get_legal_snippets():
+    """Return the current legal snippets configuration."""
+    return config.legal_snippets
+
+
+@app.put("/api/rules/legal-snippets")
+async def update_legal_snippets(request: Request):
+    """Update the legal snippets configuration from a JSON payload."""
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    config.save_legal_snippets(payload)
+    return {"status": "ok", "message": "Legal snippets updated and reloaded successfully."}
+
+
+
