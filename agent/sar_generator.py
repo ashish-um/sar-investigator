@@ -46,7 +46,7 @@ async def generate_section_3(verdict: dict, legal_context: dict):
             conditional_code_decision_rules=config.format_conditional_rules_for_prompt()
         )
         response1_text = ""
-        for chunk in llm.stream(prompt1):
+        async for chunk in llm.astream(prompt1):
             text_chunk = _extract_text(getattr(chunk, "content", ""))
             if text_chunk:
                 response1_text += text_chunk
@@ -80,7 +80,7 @@ async def generate_section_3(verdict: dict, legal_context: dict):
         yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 3 NARRATIVE PROMPT ===\n{prompt2}\n========================================\n\n"})
 
         accumulated_narrative = ""
-        for chunk in llm.stream(prompt2):
+        async for chunk in llm.astream(prompt2):
             text_chunk = _extract_text(getattr(chunk, "content", ""))
             if text_chunk:
                 accumulated_narrative += text_chunk
@@ -141,7 +141,7 @@ async def generate_section_4(verdict: dict, legal_context: dict):
         yield _sse_event("section_start", "section_4")
 
         accumulated_text = ""
-        for chunk in llm.stream(prompt):
+        async for chunk in llm.astream(prompt):
             text_chunk = _extract_text(getattr(chunk, "content", ""))
             if text_chunk:
                 accumulated_text += text_chunk
@@ -180,7 +180,7 @@ async def generate_section_5(verdict: dict, legal_context: dict = None):
         yield _sse_event("section_start", "section_5")
 
         accumulated_text = ""
-        for chunk in llm.stream(prompt):
+        async for chunk in llm.astream(prompt):
             text_chunk = _extract_text(getattr(chunk, "content", ""))
             if text_chunk:
                 accumulated_text += text_chunk
@@ -237,7 +237,7 @@ async def generate_section_6(verdict: dict, legal_context: dict):
             # Surface prompt to Agent Raw Reasoning
             yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 6 {rule_id} ANALYSIS PROMPT ===\n{prompt}\n=========================================\n\n"})
 
-            for chunk in llm.stream(prompt):
+            async for chunk in llm.astream(prompt):
                 text_chunk = _extract_text(getattr(chunk, "content", ""))
                 if text_chunk:
                     yield _sse_event("token", {"section": "section_6", "token": text_chunk})
@@ -259,7 +259,7 @@ async def generate_section_6(verdict: dict, legal_context: dict):
         # Surface statutory prompt to Agent Raw Reasoning
         yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 6 STATUTORY PROMPT ===\n{statutory_prompt}\n=========================================\n\n"})
 
-        for chunk in llm.stream(statutory_prompt):
+        async for chunk in llm.astream(statutory_prompt):
             text_chunk = _extract_text(getattr(chunk, "content", ""))
             if text_chunk:
                 yield _sse_event("token", {"section": "section_6", "token": text_chunk})
@@ -288,7 +288,7 @@ async def generate_section_7(verdict: dict, legal_context: dict):
         yield _sse_event("section_start", "section_7")
 
         accumulated_text = ""
-        for chunk in llm.stream(prompt):
+        async for chunk in llm.astream(prompt):
             text_chunk = _extract_text(getattr(chunk, "content", ""))
             if text_chunk:
                 accumulated_text += text_chunk
@@ -322,7 +322,7 @@ async def generate_section_8(verdict: dict, legal_context: dict = None):
         yield _sse_event("section_start", "section_8")
 
         accumulated_text = ""
-        for chunk in llm.stream(prompt):
+        async for chunk in llm.astream(prompt):
             text_chunk = _extract_text(getattr(chunk, "content", ""))
             if text_chunk:
                 accumulated_text += text_chunk
@@ -357,7 +357,7 @@ async def generate_section_9(verdict: dict, legal_context: dict):
         yield _sse_event("section_start", "section_9")
 
         accumulated_text = ""
-        for chunk in llm.stream(prompt):
+        async for chunk in llm.astream(prompt):
             text_chunk = _extract_text(getattr(chunk, "content", ""))
             if text_chunk:
                 accumulated_text += text_chunk
@@ -383,7 +383,7 @@ async def generate_section_10(verdict: dict, legal_context: dict = None):
         )
         yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 10 HISTORY PROMPT ===\n{prompt}\n=========================================\n\n"})
         yield _sse_event("section_start", "section_10")
-        for chunk in llm.stream(prompt):
+        async for chunk in llm.astream(prompt):
             text_chunk = _extract_text(getattr(chunk, "content", ""))
             if text_chunk:
                 yield _sse_event("token", {"section": "section_10", "token": text_chunk})
@@ -400,7 +400,7 @@ async def generate_section_11(verdict: dict, legal_context: dict = None):
         )
         yield _sse_event("debug_token", {"token": f"\n\n\n=== FINAL SECTION 11 DAML PROMPT ===\n{prompt}\n======================================\n\n"})
         yield _sse_event("section_start", "section_11")
-        for chunk in llm.stream(prompt):
+        async for chunk in llm.astream(prompt):
             text_chunk = _extract_text(getattr(chunk, "content", ""))
             if text_chunk:
                 yield _sse_event("token", {"section": "section_11", "token": text_chunk})

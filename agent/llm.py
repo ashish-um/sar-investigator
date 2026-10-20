@@ -1,8 +1,9 @@
 """
 LLM factory for the AML Investigation Agent.
 
-Reads LLM_PROVIDER from .env ("groq", "gemini", or "deepseek"), validates the
-corresponding API key, and returns the appropriate LangChain chat model.
+Reads LLM_PROVIDER from .env and returns the appropriate LangChain chat model.
+The "codex" provider uses the local Codex CLI's ChatGPT subscription login;
+other providers validate their corresponding API key.
 All providers share the BaseChatModel interface, so nothing downstream
 needs to know which provider is active.
 
@@ -24,6 +25,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 _DEFAULTS = {
+    "codex": "Codex default",
     "groq": "llama-3.3-70b-versatile",
     "gemini": "gemini-2.5-flash",
     "deepseek": "deepseek/deepseek-chat",
@@ -92,7 +94,14 @@ def get_llm():
     provider = config["provider"]
     model = config["model"]
 
-    if provider == "groq":
+    if provider == "codex":
+        from agent.codex_model import ChatCodex
+        return ChatCodex(
+            model_name=model,
+            timeout=float(os.getenv("CODEX_TIMEOUT_SECONDS", "300")),
+        )
+
+    elif provider == "groq":
         from langchain_groq import ChatGroq
         
         # When rate limit hits, graph.py will call rotate_groq_key()
@@ -177,5 +186,6 @@ def get_llm():
     else:
         raise ValueError(
             f"Unknown LLM_PROVIDER: '{provider}'. "
-            f"Supported values: 'groq', 'gemini', 'deepseek', 'cerebras'"
+            f"Supported values: 'codex', 'groq', 'gemini', 'deepseek', "
+            f"'cerebras', 'mistral', 'nvidia', 'llamacpp'"
         )

@@ -25,8 +25,9 @@ function scrollToBottom() {
 // Apply basic markdown formatting for thinking text
 function formatThinking(text) {
     return text
-        .replace(/\*([^\*]+)\*/g, '<span class="font-semibold text-slate-900">$1</span>')
-        .replace(/\*\*([^\*]+)\*\*/g, '<span class="font-semibold text-slate-900">$1</span>');
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/\*\*([^\*]+)\*\*/g, '<span class="font-semibold text-slate-900">$1</span>')
+        .replace(/\*([^\*]+)\*/g, '<span class="font-semibold text-slate-900">$1</span>');
 }
 
 // Clipboard fallback for non-secure contexts (HTTP on non-localhost)

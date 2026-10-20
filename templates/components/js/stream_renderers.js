@@ -3,6 +3,7 @@ function appendThinking(text) {
     if (!currentThinkingBlock) {
         currentThinkingBlock = document.createElement('div');
         currentThinkingBlock.className = 'p-2 animate-fade-in max-w-full text-slate-700 whitespace-pre-wrap font-sans text-[0.9375rem] leading-relaxed';
+        currentThinkingBlock.streamText = '';
 
         // Add blinking cursor
         const cursor = document.createElement('div');
@@ -12,13 +13,24 @@ function appendThinking(text) {
         outputContainer.appendChild(cursor);
     }
 
-    // Append exactly as-is but format bold text
-    currentThinkingBlock.innerHTML += formatThinking(text);
+    const block = currentThinkingBlock;
+    block.streamText += text;
+    // Render at most once per frame, keeping markdown intact across deltas.
+    if (!block.streamFrame) {
+        block.streamFrame = requestAnimationFrame(() => renderThinkingBlock(block));
+    }
+}
+
+function renderThinkingBlock(block) {
+    if (block.streamFrame) cancelAnimationFrame(block.streamFrame);
+    block.streamFrame = null;
+    block.innerHTML = formatThinking(block.streamText);
     scrollToBottom();
 }
 
 function finalizeThinkingBlock() {
     if (currentThinkingBlock) {
+        renderThinkingBlock(currentThinkingBlock);
         currentThinkingBlock = null;
         // Remove loaders
         document.querySelectorAll('.loader').forEach(e => e.remove());

@@ -93,6 +93,7 @@ def run_investigation(alert: AlertPayload) -> str:
 
             if node == "agent":
                 ai_message_index += 1
+                final_content = ""
                 print(f"\n--- [AI {ai_message_index}] ---")
 
             elif node == "tools":

@@ -7,7 +7,7 @@
         </h1>
         <div class="hidden sm:flex items-center gap-2 border-l border-slate-200 pl-6">
             <span class="text-[0.65rem] font-bold tracking-wider text-slate-400 uppercase">Provider</span>
-            <span class="text-xs bg-slate-50 border border-slate-200 text-slate-600 px-2.5 py-1 rounded font-mono uppercase">{{ llm_config.provider }}</span>
+            <span class="text-xs bg-slate-50 border border-slate-200 text-slate-600 px-2.5 py-1 rounded font-mono uppercase">{{ 'ChatGPT via Codex' if llm_config.provider == 'codex' else llm_config.provider }}</span>
             <span class="text-[0.65rem] font-bold tracking-wider text-slate-400 uppercase ml-2">Model</span>
             <span class="text-xs bg-slate-50 border border-slate-200 text-slate-600 px-2.5 py-1 rounded font-mono tracking-tight">{{ llm_config.model }}</span>
         </div>

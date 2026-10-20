@@ -118,6 +118,7 @@ def _stream_investigation(alert: AlertPayload):
                 current_node = node
                 if node == "agent":
                     ai_message_index += 1
+                    final_content = ""
                 elif node == "tools":
                     tool_message_index += 1
 
