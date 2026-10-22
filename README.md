@@ -6,7 +6,7 @@ This branch contains only investigation features; SAR drafting and the rules edi
 are excluded.
 It includes synthetic customer, account, transaction, alert, and watchlist fixtures.
 
-The default configuration uses **GPT-6 Luna through a ChatGPT-authenticated Codex
+The default configuration uses **GPT-6.1 Sol with low reasoning effort through a ChatGPT-authenticated Codex
 CLI**. Generated text streams into the investigation dashboard.
 Other supported model providers can be selected in `.env`.
 
@@ -58,7 +58,8 @@ For ChatGPT subscription access, keep these settings in `.env`:
 
 ```dotenv
 LLM_PROVIDER=codex
-LLM_MODEL=gpt-6-luna
+LLM_MODEL=gpt-6.1-sol
+CODEX_REASONING_EFFORT=low
 DB_PATH=data/aml_synthetic.db
 ```
 
@@ -99,7 +100,7 @@ stubs; they do not make subscription-backed model requests.
 ```
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The header should show
-`ChatGPT via Codex` and `gpt-6-luna`. Select a sample alert and start an investigation
+`ChatGPT via Codex` and `gpt-6.1-sol`. Select a sample alert and start an investigation
 to verify the signed-in account can use the selected model.
 
 For subsequent launches, run the server command again from the project root.
@@ -138,7 +139,8 @@ The same `.env` settings and database-preservation instructions apply.
 | Variable | Purpose |
 |----------|---------|
 | `LLM_PROVIDER` | `codex`, `groq`, `gemini`, `deepseek`, `cerebras`, `mistral`, `nvidia`, or `llamacpp` |
-| `LLM_MODEL` | Model override. The example selects `gpt-6-luna`; clear it to use the selected provider's default. |
+| `LLM_MODEL` | Model override. The example selects `gpt-6.1-sol`; clear it to use the selected provider's default. |
+| `CODEX_REASONING_EFFORT` | Codex reasoning effort; defaults to `low` (the light setting). |
 | `CODEX_CLI_PATH` | Optional native Codex executable path; otherwise resolved from PATH |
 | `CODEX_TIMEOUT_SECONDS` | Total timeout for each Codex model turn, including startup; default `300` |
 | `DB_PATH` | SQLite database path; default `data/aml_synthetic.db`, relative to the project root |

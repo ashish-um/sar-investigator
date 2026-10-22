@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
-from typing import Iterator
+from typing import Iterator, Literal
 from uuid import uuid4
 
 from langchain_core.language_models.chat_models import BaseChatModel, generate_from_stream
@@ -91,6 +91,7 @@ class ChatCodex(BaseChatModel):
     """
 
     model_name: str = "Codex default"
+    reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh", "max"] | None = None
     timeout: float = 300
 
     @property
@@ -99,7 +100,7 @@ class ChatCodex(BaseChatModel):
 
     @property
     def _identifying_params(self) -> dict:
-        return {"model_name": self.model_name}
+        return {"model_name": self.model_name, "reasoning_effort": self.reasoning_effort}
 
     def bind_tools(self, tools, *, tool_choice=None, **kwargs):
         if tool_choice not in (None, "auto"):
@@ -184,6 +185,8 @@ class ChatCodex(BaseChatModel):
                     params["model"] = self.model_name
                 thread_id = server.request("thread/start", params)["thread"]["id"]
                 turn = {"threadId": thread_id, "input": [{"type": "text", "text": prompt}]}
+                if self.reasoning_effort is not None:
+                    turn["effort"] = self.reasoning_effort
                 if tools:
                     turn["outputSchema"] = _action_schema(tools)
                 server.send("turn/start", turn, request=True)

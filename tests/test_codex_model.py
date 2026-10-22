@@ -106,13 +106,14 @@ def test_text_arrives_before_completion_and_tools_wait_for_success(fake_cli):
 
 def test_tool_ids_history_and_model_override(fake_cli):
     calls, _ = fake_cli
-    result = ChatCodex(model_name="gpt-6-luna").bind_tools([get_customer_profile]).invoke([
+    result = ChatCodex(model_name="gpt-6.1-sol", reasoning_effort="low").bind_tools([get_customer_profile]).invoke([
         HumanMessage(content="Investigate"),
         AIMessage(content="", tool_calls=[{"name": "get_customer_profile", "args": {"customer_id": "CUST-UK-004821"}, "id": "previous_call"}]),
         ToolMessage(content='{"customer_id":"CUST-UK-004821"}', tool_call_id="previous_call"),
     ])
     call = calls[-1]
-    assert call["requests"]["thread/start"]["model"] == "gpt-6-luna"
+    assert call["requests"]["thread/start"]["model"] == "gpt-6.1-sol"
+    assert call["requests"]["turn/start"]["effort"] == "low"
     assert '"tool_call_id": "previous_call"' in call["requests"]["turn/start"]["input"][0]["text"]
     assert result.tool_calls[0]["id"].startswith("call_")
 
@@ -205,6 +206,11 @@ def test_provider_factory(monkeypatch):
     monkeypatch.delenv("LLM_MODEL", raising=False)
     assert get_llm_config() == {"provider": "codex", "model": "Codex default"}
     assert isinstance(get_llm(), ChatCodex)
+    monkeypatch.setenv("LLM_MODEL", "gpt-6.1-sol")
+    monkeypatch.setenv("CODEX_REASONING_EFFORT", "low")
+    model = get_llm()
+    assert model.model_name == "gpt-6.1-sol"
+    assert model.reasoning_effort == "low"
 
 
 def test_investigation_sse_streams_text_before_verdict(monkeypatch, fake_cli):

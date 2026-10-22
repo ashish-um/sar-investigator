@@ -98,6 +98,7 @@ def get_llm():
         from agent.codex_model import ChatCodex
         return ChatCodex(
             model_name=model,
+            reasoning_effort=os.getenv("CODEX_REASONING_EFFORT", "low"),
             timeout=float(os.getenv("CODEX_TIMEOUT_SECONDS", "300")),
         )
 
