@@ -10,7 +10,7 @@ Run with:  uvicorn api:app --reload
 import json
 import os
 import re
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
@@ -20,15 +20,12 @@ from schemas.alert import AlertPayload
 from agent.prompts import build_system_prompt
 from agent.graph import graph, drain_rate_limit_events, clear_rate_limit_events
 from agent.llm import get_llm_config
-from agent.sar_generator import generate_section_1, generate_section_2, generate_section_3, generate_section_4, generate_section_5, generate_section_6, generate_section_7, generate_section_8, generate_section_9, generate_section_10, generate_section_11
-from agent.legal_context_builder import build_legal_context
-from agent.config_manager import config
 
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 app = FastAPI(
-    title="AML SAR Investigator API",
+    title="AML Investigator API",
     description="Real-time AML investigation via Server-Sent Events",
     version="1.0.0",
 )
@@ -249,121 +246,6 @@ async def root(request: Request):
     return templates.TemplateResponse(request, "index.html", {"llm_config": get_llm_config()})
 
 
-@app.get("/sar-editor")
-async def sar_editor(request: Request):
-    """Serve the SAR Editor mockup screen."""
-    return templates.TemplateResponse(request, "sar_editor.html", {"llm_config": get_llm_config()})
-
-
-@app.get("/rules-editor")
-async def rules_editor(request: Request):
-    """Serve the Admin Rules Editor screen."""
-    return templates.TemplateResponse(request, "rules_editor.html", {"llm_config": get_llm_config()})
-
-
-import asyncio
-
-@app.post("/generate-section/{section_id}")
-async def generate_specific_section(section_id: str, request: Request):
-    """
-    Modular endpoint to generate a specific SAR section on demand.
-    """
-    try:
-        verdict = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
-    
-    # 1. Build the legal context synchronously ONCE
-    legal_context = build_legal_context(verdict)
-    
-    # 2. Route to the correct section generator
-    if section_id == "section_1":
-        generator = generate_section_1(verdict, legal_context)
-    elif section_id == "section_2":
-        generator = generate_section_2(verdict, legal_context)
-    elif section_id == "section_3":
-        generator = generate_section_3(verdict, legal_context)
-    elif section_id == "section_4":
-        generator = generate_section_4(verdict, legal_context)
-    elif section_id == "section_5":
-        generator = generate_section_5(verdict, legal_context)
-    elif section_id == "section_6":
-        generator = generate_section_6(verdict, legal_context)
-    elif section_id == "section_7":
-        generator = generate_section_7(verdict, legal_context)
-    elif section_id == "section_8":
-        generator = generate_section_8(verdict, legal_context)
-    elif section_id == "section_9":
-        generator = generate_section_9(verdict, legal_context)
-    elif section_id == "section_10":
-        generator = generate_section_10(verdict, legal_context)
-    elif section_id == "section_11":
-        generator = generate_section_11(verdict, legal_context)
-    else:
-        raise HTTPException(status_code=404, detail=f"Generator for {section_id} not implemented yet.")
-
-    return StreamingResponse(
-        generator, 
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
-        },
-    )
-
-@app.get("/generate-sar-mock")
-async def generate_sar_mock():
-    """Simulate streaming of a generated SAR document via SSE."""
-    async def mock_generator():
-        sections = [
-            ("Filing Particulars", [
-                "The **subject of this SAR** is an individual suspected of involvement ",
-                "in a complex web of shell companies designed to obfuscate ",
-                "the true nature of international wire transfers. ",
-                "Multiple high-value transactions were observed ",
-                "originating from jurisdictions known for weak AML controls.\n\n",
-                "| Activity Type | Total Amount | Transaction Count |\n",
-                "|--------------|--------------|-------------------|\n",
-                "| Cash Deposits | $94,500 | 12 |\n",
-                "| Outbound Wires | $90,000 | 3 |\n\n",
-                "The transaction pattern indicates suspected structuring ",
-                "with deposits consistently held just below the $10,000 threshold."
-            ]),
-            ("Subject Identification", [
-                "The primary subject, John Doe (DOB: 15-May-1980), ",
-                "maintains three personal and two business accounts.\n\n",
-                "Key findings:\n",
-                "- High velocity of funds\n",
-                "- Missing KYC documentation\n",
-                "- Adverse media hits"
-            ])
-        ]
-        
-        for section_title, tokens in sections:
-            yield _sse_event("section_start", section_title)
-            await asyncio.sleep(0.5)
-            
-            for token in tokens:
-                yield _sse_event("token", {"text": token})
-                await asyncio.sleep(0.05)
-                
-            yield _sse_event("section_done", section_title)
-            await asyncio.sleep(0.5)
-            
-        yield _sse_event("complete", "done")
-
-    return StreamingResponse(
-        mock_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
-        },
-    )
-
-
 # ── Data Lookup Endpoints (Evidence Verification) ────────────────────────
 
 _TABLE_PRIMARY_KEYS = {
@@ -427,62 +309,6 @@ async def get_data_record(table: str, record_id: str):
         if not row:
             return {"error": f"No record found: {table}/{record_id}"}
         return {"table": table, "id": record_id, "data": dict(row)}
-
-
-# ── Dynamic Config Endpoints (Glossary Codes UI) ────────────────────────
-
-@app.get("/api/rules/glossary-codes")
-async def get_glossary_codes():
-    """Return the current glossary codes configuration."""
-    return config.glossary_codes
-
-
-@app.put("/api/rules/glossary-codes")
-async def update_glossary_codes(request: Request):
-    """Update the glossary codes configuration from a JSON payload."""
-    try:
-        payload = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
-
-    config.save_glossary_codes(payload)
-    return {"status": "ok", "message": "Glossary codes updated and reloaded successfully."}
-
-
-@app.get("/api/rules/aml-rules")
-async def get_aml_rules():
-    """Return the current AML rules configuration."""
-    return config.aml_rules
-
-
-@app.put("/api/rules/aml-rules")
-async def update_aml_rules(request: Request):
-    """Update the AML rules configuration from a JSON payload."""
-    try:
-        payload = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
-
-    config.save_aml_rules(payload)
-    return {"status": "ok", "message": "AML rules updated and reloaded successfully."}
-
-
-@app.get("/api/rules/legal-snippets")
-async def get_legal_snippets():
-    """Return the current legal snippets configuration."""
-    return config.legal_snippets
-
-
-@app.put("/api/rules/legal-snippets")
-async def update_legal_snippets(request: Request):
-    """Update the legal snippets configuration from a JSON payload."""
-    try:
-        payload = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
-
-    config.save_legal_snippets(payload)
-    return {"status": "ok", "message": "Legal snippets updated and reloaded successfully."}
 
 
 

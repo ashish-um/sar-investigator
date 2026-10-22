@@ -117,10 +117,10 @@ def test_tool_ids_history_and_model_override(fake_cli):
     assert result.tool_calls[0]["id"].startswith("call_")
 
 
-def test_plain_sar_stream_has_multiple_real_deltas(fake_cli):
+def test_plain_investigation_stream_has_multiple_real_deltas(fake_cli):
     calls, response = fake_cli
     response["answer"] = "Funds moved between the customer's own accounts."
-    stream = ChatCodex().stream("Draft a SAR section")
+    stream = ChatCodex().stream("Summarize the investigation findings")
     first = next(stream)
     assert not calls[-1]["completed"]
     chunks = [first, *stream]

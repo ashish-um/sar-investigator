@@ -1,11 +1,13 @@
-# AML SAR Investigator
+# AML Investigator
 
 A local web dashboard and LangGraph agent for investigating suspicious-activity
-alerts, gathering evidence from SQLite, and drafting SAR sections. The repository
-includes synthetic customer, account, transaction, alert, and watchlist fixtures.
+alerts, gathering evidence from SQLite, and producing investigation verdicts.
+This branch contains only investigation features; SAR drafting and the rules editor
+are excluded.
+It includes synthetic customer, account, transaction, alert, and watchlist fixtures.
 
 The default configuration uses **GPT-6 Luna through a ChatGPT-authenticated Codex
-CLI**. Generated text streams into the investigation dashboard and SAR editor.
+CLI**. Generated text streams into the investigation dashboard.
 Other supported model providers can be selected in `.env`.
 
 ## Set up on a new Windows laptop
@@ -162,8 +164,8 @@ clear `LLM_MODEL`, and supply that provider's credential if required.
    read-only sandbox and Codex shell, web, and app tools disabled.
 5. The model requests evidence through a structured JSON envelope. LangGraph
    executes the application tools against SQLite and sends the evidence back.
-6. Public text deltas flow through LangChain and FastAPI SSE into the dashboard
-   and SAR editor. `agent/json_content_stream.py` incrementally decodes the
+6. Public text deltas flow through LangChain and FastAPI SSE into the dashboard.
+   `agent/json_content_stream.py` incrementally decodes the
    envelope's text, including escaped characters, without displaying its wrapper.
 
 Transport deltas may contain one or several tokens. Text appears as it arrives;
@@ -213,12 +215,12 @@ git check-ignore -v .env data/aml_synthetic.db
 ## Project structure
 
 ```text
-agent/              Model adapters, LangGraph agent, prompts, SAR generation
-config/             Versioned AML rules, glossary codes, and legal snippets
+agent/              Model adapters, LangGraph investigator, and prompts
+config/             Versioned AML rules and evidence guidelines
 data/csv/           Synthetic fixtures
 data/scripts/       Database schema and seeding
 schemas/            Pydantic alert/verdict models
-templates/          Dashboard, SAR editor, rules editor, and browser scripts
+templates/          Investigation dashboard, evidence viewer, and browser scripts
 tests/              Evidence-tool and streaming tests; sample alerts
 tools/internal/     Local investigation tools
 api.py              FastAPI routes and SSE endpoints
